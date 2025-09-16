@@ -1,0 +1,4 @@
+.dpd-rules-table { width: 100%; border-collapse: collapse; }
+.dpd-rules-table.small td, .dpd-rules-table.small th { padding: 4px; }
+.dpd-rules-table th, .dpd-rules-table td { border-bottom: 1px solid #eee; }
+.dpd-metabox .dpd-rules-table { width: 100%; }
