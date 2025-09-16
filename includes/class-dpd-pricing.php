@@ -25,13 +25,45 @@ class DPD_Pricing {
 		$product_id = self::resolve_product_id($product);
 		if (!$product_id) { return $price; }
 		$product_rules = DPD_Rules::filter_rules_for_apply(DPD_Rules::get_product_rules($product_id));
-		$rule = DPD_Rules::pick_applicable_rule($product_rules);
+		// Check if a cart context selected datetime exists for this product
+		$selected = self::get_selected_datetime_context($product_id);
+		$rule = self::pick_rule_with_context($product_rules, $selected);
 		if (!$rule) {
 			$global_rules = DPD_Rules::filter_rules_for_apply(DPD_Rules::get_global_rules());
-			$rule = DPD_Rules::pick_applicable_rule($global_rules);
+			$rule = self::pick_rule_with_context($global_rules, $selected);
 		}
 		if ($rule) { return DPD_Rules::apply_rule_to_price($price_float, $rule); }
 		return $price;
+	}
+
+	protected static function get_selected_datetime_context(int $product_id): ?array {
+		// Default to "today" if nothing selected
+		$ts = current_time('timestamp');
+		$use_ts = $ts;
+		if (function_exists('WC') && WC()->cart) {
+			foreach (WC()->cart->get_cart() as $cart_item_key => $cart_item) {
+				if (!empty($cart_item['product_id']) && intval($cart_item['product_id']) === $product_id && !empty($cart_item[DPD_Frontend::FIELD_KEY])) {
+					$val = $cart_item[DPD_Frontend::FIELD_KEY];
+					// Expecting YYYY-MM-DDTHH:MM
+					$parsed = strtotime($val);
+					if ($parsed) { $use_ts = $parsed; break; }
+				}
+			}
+		}
+		return [
+			'dow'  => (int)gmdate('w', $use_ts),
+			'date' => gmdate('Y-m-d', $use_ts),
+		];
+	}
+
+	protected static function pick_rule_with_context(array $rules, ?array $ctx): ?array {
+		if (empty($rules)) { return null; }
+		if (!$ctx) { return DPD_Rules::pick_applicable_rule($rules); }
+		$match = null;
+		foreach ($rules as $rule) {
+			if (DPD_Rules::rule_matches($rule, $ctx['dow'], $ctx['date'])) { $match = $rule; }
+		}
+		return $match;
 	}
 
 	protected static function resolve_product_id($product): ?int {

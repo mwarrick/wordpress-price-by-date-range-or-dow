@@ -23,8 +23,10 @@ define('DPD_PLUGIN_URL', plugin_dir_url(__FILE__));
 require_once DPD_PLUGIN_DIR . 'includes/class-dpd-rules.php';
 require_once DPD_PLUGIN_DIR . 'includes/class-dpd-admin.php';
 require_once DPD_PLUGIN_DIR . 'includes/class-dpd-pricing.php';
+require_once DPD_PLUGIN_DIR . 'includes/class-dpd-frontend.php';
 
 add_action('plugins_loaded', function () {
 	DPD_Admin::init();
 	DPD_Pricing::init();
+	DPD_Frontend::init();
 });
