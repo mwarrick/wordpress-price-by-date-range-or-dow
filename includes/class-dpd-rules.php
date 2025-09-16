@@ -47,7 +47,18 @@ class DPD_Rules {
 	}
 
 	public static function sanitize_rules_array(array $rules): array {
+		// Store sanitized rows as-entered (including disabled rows) so UI selections persist
 		$clean = [];
+		foreach ($rules as $rule) {
+			if (!is_array($rule)) { continue; }
+			$clean[] = self::sanitize_rule($rule);
+		}
+		return $clean;
+	}
+
+	public static function filter_rules_for_apply(array $rules): array {
+		// At runtime, only enabled rules with valid amounts are considered
+		$applicable = [];
 		foreach ($rules as $rule) {
 			if (!is_array($rule)) { continue; }
 			$sr = self::sanitize_rule($rule);
@@ -61,9 +72,9 @@ class DPD_Rules {
 				if (floatval($val) <= 0) { continue; }
 				$sr['amount'] = $val;
 			}
-			$clean[] = $sr;
+			$applicable[] = $sr;
 		}
-		return $clean;
+		return $applicable;
 	}
 
 	public static function today_context(): array {
@@ -75,6 +86,7 @@ class DPD_Rules {
 	}
 
 	public static function rule_matches(array $rule, int $dow, string $date): bool {
+		if (($rule['enabled'] ?? '0') !== '1') { return false; }
 		if (!empty($rule['dow'])) { if ((int)$rule['dow'] !== $dow) { return false; } }
 		if (!empty($rule['date_start'])) { if ($date < $rule['date_start']) { return false; } }
 		if (!empty($rule['date_end'])) { if ($date > $rule['date_end']) { return false; } }

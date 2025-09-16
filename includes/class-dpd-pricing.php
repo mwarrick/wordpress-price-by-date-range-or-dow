@@ -24,10 +24,10 @@ class DPD_Pricing {
 		if ($price_float <= 0) { return $price; }
 		$product_id = self::resolve_product_id($product);
 		if (!$product_id) { return $price; }
-		$product_rules = DPD_Rules::get_product_rules($product_id);
+		$product_rules = DPD_Rules::filter_rules_for_apply(DPD_Rules::get_product_rules($product_id));
 		$rule = DPD_Rules::pick_applicable_rule($product_rules);
 		if (!$rule) {
-			$global_rules = DPD_Rules::get_global_rules();
+			$global_rules = DPD_Rules::filter_rules_for_apply(DPD_Rules::get_global_rules());
 			$rule = DPD_Rules::pick_applicable_rule($global_rules);
 		}
 		if ($rule) { return DPD_Rules::apply_rule_to_price($price_float, $rule); }
