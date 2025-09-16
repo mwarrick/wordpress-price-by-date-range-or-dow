@@ -66,6 +66,14 @@ class DPD_Pricing {
 		return $match;
 	}
 
+	public static function get_rule_for_context(int $product_id, array $ctx): ?array {
+		$product_rules = DPD_Rules::filter_rules_for_apply(DPD_Rules::get_product_rules($product_id));
+		$rule = self::pick_rule_with_context($product_rules, $ctx);
+		if ($rule) { return $rule; }
+		$global_rules = DPD_Rules::filter_rules_for_apply(DPD_Rules::get_global_rules());
+		return self::pick_rule_with_context($global_rules, $ctx);
+	}
+
 	protected static function resolve_product_id($product): ?int {
 		if (is_numeric($product)) { return intval($product); }
 		if (is_object($product) && method_exists($product, 'get_id')) { return intval($product->get_id()); }
