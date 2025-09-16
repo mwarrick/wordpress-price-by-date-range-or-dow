@@ -9,6 +9,10 @@ class DPD_Admin {
 		add_action('add_meta_boxes', [__CLASS__, 'add_product_metabox']);
 		add_action('save_post_product', [__CLASS__, 'save_product_rules']);
 		add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_admin_assets']);
+		// WooCommerce product data tab (works with the standard product editor UI)
+		add_filter('woocommerce_product_data_tabs', [__CLASS__, 'add_product_data_tab']);
+		add_action('woocommerce_product_data_panels', [__CLASS__, 'render_product_data_panel']);
+		add_action('woocommerce_admin_process_product_object', [__CLASS__, 'save_product_rules_from_product_object']);
 	}
 
 	public static function add_menu(): void {
@@ -184,5 +188,36 @@ class DPD_Admin {
 		$clean = DPD_Rules::sanitize_rules_array($rules);
 		if (!empty($clean)) { DPD_Rules::save_product_rules($post_id, $clean); }
 		else { delete_post_meta($post_id, DPD_Rules::META_PRODUCT_RULES); }
+	}
+
+	public static function add_product_data_tab(array $tabs): array {
+		$tabs['dpd_tab'] = [
+			'label'    => __('Dynamic Pricing by Date', 'dpd'),
+			'target'   => 'dpd_product_data',
+			'class'    => ['show_if_simple','show_if_variable','show_if_grouped','show_if_external'],
+			'priority' => 80,
+		];
+		return $tabs;
+	}
+
+	public static function render_product_data_panel(): void {
+		echo '<div id="dpd_product_data" class="panel woocommerce_options_panel">';
+		// Reuse the metabox UI inside the panel
+		global $post;
+		if ($post instanceof WP_Post) {
+			self::render_product_metabox($post);
+		}
+		echo '</div>';
+	}
+
+	public static function save_product_rules_from_product_object(WC_Product $product): void {
+		if (!isset($_POST['dpd_product_rules'])) { return; }
+		$rules = is_array($_POST['dpd_product_rules']) ? $_POST['dpd_product_rules'] : [];
+		$clean = DPD_Rules::sanitize_rules_array($rules);
+		if (!empty($clean)) {
+			DPD_Rules::save_product_rules($product->get_id(), $clean);
+		} else {
+			delete_post_meta($product->get_id(), DPD_Rules::META_PRODUCT_RULES);
+		}
 	}
 }
