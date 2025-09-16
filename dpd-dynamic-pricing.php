@@ -2,8 +2,8 @@
 /*
 Plugin Name: Dynamic Pricing by Date (Woo)
 Description: Adjust WooCommerce product prices by day-of-week and date range, with global and per-product rules.
-Version: 1.0.0
-Author: You
+Version: 1.1.0
+Author: Mark Warrick
 Text Domain: dpd
 */
 
@@ -15,7 +15,7 @@ if (!in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get
 	return;
 }
 
-define('DPD_VERSION', '1.0.0');
+define('DPD_VERSION', '1.1.0');
 define('DPD_PLUGIN_FILE', __FILE__);
 define('DPD_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('DPD_PLUGIN_URL', plugin_dir_url(__FILE__));
