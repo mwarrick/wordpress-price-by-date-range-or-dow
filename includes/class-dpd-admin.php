@@ -79,8 +79,8 @@ class DPD_Admin {
 							<td><input type="checkbox" name="dpd_rules[<?php echo esc_attr($idx); ?>][enabled]" value="1" <?php checked($rule['enabled'] ?? '0', '1'); ?> /></td>
 							<td>
 								<select name="dpd_rules[<?php echo esc_attr($idx); ?>][dow]">
-									<option value="" <?php selected(($rule['dow'] ?? '') === ''); ?>><?php esc_html_e('Any', 'dpd'); ?></option>
-									<?php $dows = ['0'=>__('Sunday','dpd'),'1'=>__('Monday','dpd'),'2'=>__('Tuesday','dpd'),'3'=>__('Wednesday','dpd'),'4'=>__('Thursday','dpd'),'5'=>__('Friday','dpd'),'6'=>__('Saturday','dpd')]; foreach ($dows as $val=>$label) { echo '<option value="'.esc_attr($val).'"'. selected(($rule['dow'] ?? '') === $val, true, false) .'>'. esc_html($label) .'</option>'; } ?>
+									<option value="" <?php selected(($rule['dow'] ?? ''), ''); ?>><?php esc_html_e('Any', 'dpd'); ?></option>
+									<?php $dows = ['0'=>__('Sunday','dpd'),'1'=>__('Monday','dpd'),'2'=>__('Tuesday','dpd'),'3'=>__('Wednesday','dpd'),'4'=>__('Thursday','dpd'),'5'=>__('Friday','dpd'),'6'=>__('Saturday','dpd')]; foreach ($dows as $val=>$label) { echo '<option value="'.esc_attr($val).'"'. selected(($rule['dow'] ?? ''), $val, false) .'>'. esc_html($label) .'</option>'; } ?>
 								</select>
 							</td>
 							<td><input type="date" name="dpd_rules[<?php echo esc_attr($idx); ?>][date_start]" value="<?php echo esc_attr($rule['date_start'] ?? ''); ?>" /></td>
@@ -147,8 +147,8 @@ class DPD_Admin {
 						<td><input type="checkbox" name="dpd_product_rules[<?php echo esc_attr($idx); ?>][enabled]" value="1" <?php checked($rule['enabled'] ?? '0','1'); ?> /></td>
 						<td>
 							<select name="dpd_product_rules[<?php echo esc_attr($idx); ?>][dow]">
-								<option value="" <?php selected(($rule['dow'] ?? '') === ''); ?>><?php esc_html_e('Any', 'dpd'); ?></option>
-								<?php $dows = ['0'=>__('Sun','dpd'),'1'=>__('Mon','dpd'),'2'=>__('Tue','dpd'),'3'=>__('Wed','dpd'),'4'=>__('Thu','dpd'),'5'=>__('Fri','dpd'),'6'=>__('Sat','dpd')]; foreach ($dows as $val=>$label) { echo '<option value="'.esc_attr($val).'"'. selected(($rule['dow'] ?? '') === $val, true, false) .'>'. esc_html($label) .'</option>'; } ?>
+								<option value="" <?php selected(($rule['dow'] ?? ''), ''); ?>><?php esc_html_e('Any', 'dpd'); ?></option>
+								<?php $dows = ['0'=>__('Sun','dpd'),'1'=>__('Mon','dpd'),'2'=>__('Tue','dpd'),'3'=>__('Wed','dpd'),'4'=>__('Thu','dpd'),'5'=>__('Fri','dpd'),'6'=>__('Sat','dpd')]; foreach ($dows as $val=>$label) { echo '<option value="'.esc_attr($val).'"'. selected(($rule['dow'] ?? ''), $val, false) .'>'. esc_html($label) .'</option>'; } ?>
 							</select>
 						</td>
 						<td><input type="date" name="dpd_product_rules[<?php echo esc_attr($idx); ?>][date_start]" value="<?php echo esc_attr($rule['date_start'] ?? ''); ?>" /></td>
