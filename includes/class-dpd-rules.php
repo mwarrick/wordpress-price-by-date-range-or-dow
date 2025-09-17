@@ -18,7 +18,10 @@ class DPD_Rules {
 
 	public static function get_product_rules(int $product_id): array {
 		$rules = get_post_meta($product_id, self::META_PRODUCT_RULES, true);
-		return is_array($rules) ? array_values($rules) : [];
+		error_log('DPD Rules Load: Product ID ' . $product_id . ' - Raw meta: ' . print_r($rules, true));
+		$result = is_array($rules) ? array_values($rules) : [];
+		error_log('DPD Rules Load: Product ID ' . $product_id . ' - Processed rules: ' . print_r($result, true));
+		return $result;
 	}
 
 	public static function save_product_rules(int $product_id, array $rules): void {
