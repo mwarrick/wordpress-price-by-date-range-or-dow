@@ -440,14 +440,19 @@ class DPD_Admin {
 	}
 
 	public static function save_product_rules_from_product_object(WC_Product $product): void {
-		if (!isset($_POST['dpd_product_rules'])) { return; }
-		// Require the same nonce used by the metabox UI to avoid unintended writes
+		// Only proceed if our nonce is present and valid
 		if (!isset($_POST['dpd_product_nonce']) || !wp_verify_nonce($_POST['dpd_product_nonce'], 'dpd_save_product_rules')) { return; }
-		$rules = is_array($_POST['dpd_product_rules']) ? $_POST['dpd_product_rules'] : [];
+		$has_rules_post = isset($_POST['dpd_product_rules']);
+		$explicit_save  = isset($_POST['dpd_save_product_rules']);
+		// If neither rules were posted nor explicit save requested, skip
+		if (!$has_rules_post && !$explicit_save) { return; }
+		
+		$rules = $has_rules_post && is_array($_POST['dpd_product_rules']) ? $_POST['dpd_product_rules'] : [];
 		$clean = DPD_Rules::sanitize_rules_array($rules);
 		if (!empty($clean)) {
 			DPD_Rules::save_product_rules($product->get_id(), $clean);
 		} else {
+			// Explicit delete when no rules after sanitization (covers Delete All)
 			delete_post_meta($product->get_id(), DPD_Rules::META_PRODUCT_RULES);
 		}
 	}
