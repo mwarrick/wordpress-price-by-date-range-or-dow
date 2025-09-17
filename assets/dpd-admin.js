@@ -95,6 +95,33 @@
 		$row.remove();
 	});
 
+	// Prune blank rows on submit for both global and product forms
+	$(document).on('submit', 'form', function(){
+		var $form = $(this);
+		// Only act on our DPD forms
+		var isDPD = $form.find('#dpd-rules-body, #dpd-product-rules-body').length > 0;
+		if (!isDPD) { return; }
+		// Remove rows where all key inputs are empty/unchecked
+		$form.find('tbody#dpd-rules-body tr.dpd-rule-row, tbody#dpd-product-rules-body tr.dpd-rule-row').each(function(){
+			var $r = $(this);
+			var enabled = $r.find('input[type="checkbox"]').is(':checked');
+			var hasDow = ($r.find('select[name*="[dow]"]').val() || '') !== '';
+			var ds = ($r.find('input[name*="[date_start]"]').val() || '').trim();
+			var de = ($r.find('input[name*="[date_end]"]').val() || '').trim();
+			// Check the partner row for type/direction/amount if present
+			var $partner = $r.next();
+			var type = $partner.find('select[name*="[type]"]').val() || '';
+			var dir = $partner.find('select[name*="[direction]"]').val() || '';
+			var amt = ($partner.find('input[name*="[amount]"]').val() || '').trim();
+			var hasAny = enabled || hasDow || ds || de || type || dir || amt;
+			if (!hasAny) {
+				// Remove both the row and its partner (if any)
+				if ($partner.length && !$partner.hasClass('dpd-rule-row')) { $partner.remove(); }
+				$r.remove();
+			}
+		});
+	});
+
 	// Date validation - prevent past dates
 	$(document).on('change', 'input[type="date"]', function(){
 		var $input = $(this);

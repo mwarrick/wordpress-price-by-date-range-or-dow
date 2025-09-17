@@ -61,11 +61,18 @@ class DPD_Rules {
 	}
 
 	public static function sanitize_rules_array(array $rules): array {
-		// Store sanitized rows as-entered (including disabled rows) so UI selections persist
 		$clean = [];
 		foreach ($rules as $rule) {
 			if (!is_array($rule)) { continue; }
-			$clean[] = self::sanitize_rule($rule);
+			$r = self::sanitize_rule($rule);
+			// Drop fully-empty rows (all fields blank/zero and not enabled)
+			$allBlank = ($r['enabled'] !== '1')
+				&& ($r['dow'] === '')
+				&& ($r['date_start'] === '')
+				&& ($r['date_end'] === '')
+				&& ($r['amount'] === '0' || $r['amount'] === '');
+			if ($allBlank) { continue; }
+			$clean[] = $r;
 		}
 		return $clean;
 	}

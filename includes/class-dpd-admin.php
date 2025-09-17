@@ -360,6 +360,7 @@ class DPD_Admin {
 		?>
 		<div class="dpd-metabox">
 			<p><?php esc_html_e('Per-product rules override global rules. Leave empty to use global.', 'dpd'); ?></p>
+			<p><em><?php esc_html_e('Use the button below to save pricing rules without updating other product fields.', 'dpd'); ?></em></p>
 			<table class="dpd-rules-table small">
 				<thead>
 					<tr>
@@ -399,7 +400,10 @@ class DPD_Admin {
 				<?php endforeach; ?>
 				</tbody>
 			</table>
-			<p><button type="button" class="button button-secondary" id="dpd-add-product-row"><?php esc_html_e('Add Rule', 'dpd'); ?></button></p>
+			<p>
+				<button type="button" class="button button-secondary" id="dpd-add-product-row"><?php esc_html_e('Add Rule', 'dpd'); ?></button>
+				<button type="submit" class="button button-primary" name="dpd_save_product_rules" value="1"><?php esc_html_e('Save Pricing Rules', 'dpd'); ?></button>
+			</p>
 		</div>
 		<?php
 	}
