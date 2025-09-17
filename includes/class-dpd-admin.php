@@ -382,7 +382,7 @@ class DPD_Admin {
 				<?php foreach ($rules as $idx => $rule): ?>
 					<?php error_log('DPD Metabox: Rendering rule ' . $idx . ' - ' . print_r($rule, true)); ?>
 					<tr class="dpd-rule-row">
-						<td><input type="checkbox" name="dpd_product_rules[<?php echo esc_attr($idx); ?>][enabled]" value="1" <?php checked($rule['enabled'] ?? '0','1'); ?> /></td>
+						<td><input type="checkbox" name="dpd_product_rules[<?php echo esc_attr($idx); ?>][enabled]" value="1" <?php checked($rule['enabled'] ?? '0','1'); ?> /> <!-- DEBUG: enabled=<?php echo $rule['enabled'] ?? '0'; ?> --></td>
 						<td>
 							<select name="dpd_product_rules[<?php echo esc_attr($idx); ?>][dow]">
 								<option value="" <?php selected(($rule['dow'] ?? ''), ''); ?>><?php esc_html_e('Any', 'dpd'); ?></option>
@@ -402,7 +402,7 @@ class DPD_Admin {
 								<option value="increase" <?php selected($rule['direction'] ?? '', 'increase'); ?>><?php esc_html_e('Increase', 'dpd'); ?></option>
 								<option value="decrease" <?php selected($rule['direction'] ?? '', 'decrease'); ?>><?php esc_html_e('Decrease', 'dpd'); ?></option>
 							</select>
-							<input type="number" step="0.01" min="0" name="dpd_product_rules[<?php echo esc_attr($idx); ?>][amount]" value="<?php echo esc_attr($rule['amount'] ?? ''); ?>" />
+							<input type="number" step="0.01" min="0" name="dpd_product_rules[<?php echo esc_attr($idx); ?>][amount]" value="<?php echo esc_attr($rule['amount'] ?? ''); ?>" /> <!-- DEBUG: amount=<?php echo $rule['amount'] ?? ''; ?> -->
 							<button type="button" class="button dpd-remove-row"><?php esc_html_e('Remove', 'dpd'); ?></button>
 						</td>
 					</tr>
