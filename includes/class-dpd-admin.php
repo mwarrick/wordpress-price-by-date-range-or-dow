@@ -367,6 +367,7 @@ class DPD_Admin {
 		<div class="dpd-metabox">
 			<p><?php esc_html_e('Per-product rules override global rules. Leave empty to use global.', 'dpd'); ?></p>
 			<p><em><?php esc_html_e('Use the button below to save pricing rules without updating other product fields.', 'dpd'); ?></em></p>
+			<!-- DEBUG: Rules count: <?php echo count($rules); ?> -->
 			<input type="hidden" name="dpd_save_product_rules" value="1" />
 			<table class="dpd-rules-table small">
 				<thead>
