@@ -215,7 +215,7 @@ class DPD_Frontend {
 		}
 		
 		if ($has_dynamic_pricing) {
-			echo '<div class="woocommerce-info dpd-cart-notice" style="margin-bottom: 20px; padding: 15px; background: #f0f8ff; border-left: 4px solid #0073aa; border-radius: 4px;">';
+			echo '<div class="woocommerce-info dpd-cart-notice">';
 			echo '<strong>' . esc_html__('Dynamic Pricing Applied', 'dpd') . '</strong><br>';
 			echo esc_html__('Prices shown below reflect dynamic pricing adjustments based on your selected dates and times. See individual item details for specific adjustments.', 'dpd');
 			echo '</div>';
@@ -223,6 +223,11 @@ class DPD_Frontend {
 	}
 
 	public static function enqueue_assets(): void {
+		// Enqueue CSS for cart and checkout pages
+		if (is_cart() || is_checkout() || is_product()) {
+			wp_enqueue_style('dpd-frontend', DPD_PLUGIN_URL . 'assets/dpd-frontend.css', [], DPD_VERSION);
+		}
+		
 		if (!is_product()) { 
 			error_log('DPD: Not on product page, skipping asset enqueue');
 			return; 
