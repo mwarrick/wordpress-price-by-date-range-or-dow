@@ -135,6 +135,7 @@
 			var dir = $partner.find('select[name*="[direction]"]').val() || '';
 			var amt = ($partner.find('input[name*="[amount]"]').val() || '').trim();
 			var hasAny = enabled || hasDow || ds || de || type || dir || amt;
+			console.log('DPD Prune: Row check - enabled:', enabled, 'hasDow:', hasDow, 'ds:', ds, 'de:', de, 'type:', type, 'dir:', dir, 'amt:', amt, 'hasAny:', hasAny);
 			if (!hasAny) {
 				// Remove both the row and its partner (if any)
 				if ($partner.length && !$partner.hasClass('dpd-rule-row')) { $partner.remove(); }
