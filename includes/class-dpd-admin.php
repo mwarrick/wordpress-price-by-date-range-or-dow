@@ -356,10 +356,12 @@ class DPD_Admin {
 		// Provide product id for AJAX operations
 		echo '<input type="hidden" id="dpd_admin_product_id" value="' . esc_attr($post->ID) . '" />';
 		$rules = DPD_Rules::get_product_rules($post->ID);
+		error_log('DPD Metabox: Product ID ' . $post->ID . ' - Rules for display: ' . print_r($rules, true));
 		if (empty($rules)) {
 			$rules = [[
 				'enabled' => '0', 'dow' => '', 'date_start' => '', 'date_end' => '', 'type' => 'percent', 'direction' => 'increase', 'amount' => '10',
 			]];
+			error_log('DPD Metabox: Using default empty rule');
 		}
 		?>
 		<div class="dpd-metabox">
