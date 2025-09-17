@@ -5,15 +5,9 @@ if (!defined('ABSPATH')) {
 
 class DPD_Admin {
 	public static function init(): void {
-		// Debug: Add admin notice to confirm admin class is loading
-		add_action('admin_notices', function() {
-			if (current_user_can('manage_woocommerce')) {
-				echo '<div class="notice notice-info"><p>DPD Admin initialized successfully</p></div>';
-			}
-		});
-		
 		add_action('admin_menu', [__CLASS__, 'add_menu']);
-		add_action('add_meta_boxes', [__CLASS__, 'add_product_metabox']);
+		// Removed sidebar metabox to prevent duplication with product data tab
+		// add_action('add_meta_boxes', [__CLASS__, 'add_product_metabox']);
 		add_action('save_post_product', [__CLASS__, 'save_product_rules']);
 		add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_admin_assets']);
 		// WooCommerce product data tab (works with the standard product editor UI)

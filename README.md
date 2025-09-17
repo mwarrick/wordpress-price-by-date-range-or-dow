@@ -28,7 +28,8 @@ A comprehensive WordPress plugin that dynamically adjusts WooCommerce product pr
 ### 🔧 Technical Features
 - **Timezone Aware**: Properly handles WordPress site timezone settings
 - **AJAX Price Updates**: Smooth user experience with real-time price changes
-- **Cart Integration**: Selected date/time stored in cart and order data
+- **Complete Cart Integration**: Selected date/time stored in cart and order data with consistent pricing
+- **Variable Product Support**: Full support for WooCommerce variable products and variations
 - **WooCommerce Compatible**: Works with all WooCommerce product types
 - **Translation Ready**: Full internationalization support
 
@@ -58,9 +59,11 @@ Navigate to **WooCommerce → Dynamic Pricing by Date**:
 
 ### Product-Specific Rules
 1. Edit any WooCommerce product
-2. Scroll to **Dynamic Pricing by Date** metabox
+2. Click the **Dynamic Pricing by Date** tab in the product data section
 3. Configure rules (same options as global rules)
-4. Product rules override global rules
+4. Use "Save Pricing Rules" to save only the pricing rules
+5. Use "Delete All Rules" to remove all product-specific rules
+6. Product rules override global rules
 
 ## Usage Examples
 
@@ -109,6 +112,9 @@ For issues or feature requests, please check the diagnostics page first, then co
 
 ## Version History
 
+- **1.5.0**: Complete cart integration - Fixed cart pricing for variable products, added comprehensive cart item pricing hooks, resolved frontend-to-cart price consistency, enhanced debugging system
+- **1.4.0**: Major stability improvements - Fixed duplicate UI rendering, enhanced per-product rules management, improved debugging, removed debug messages, better multisite compatibility
+- **1.3.0**: Enhanced frontend experience - Friendly time dropdowns, required field validation, global time range settings, improved AJAX handling
 - **1.2.2**: Stable release with time range settings, improved validation, and enhanced debugging
 - **1.2.1**: Fixed rule matching logic and timezone handling
 - **1.2.0**: Added frontend date/time selection and AJAX price updates

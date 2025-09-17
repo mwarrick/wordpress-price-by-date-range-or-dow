@@ -156,8 +156,12 @@ class DPD_Rules {
 		$type      = $rule['type'];
 		
 		if ($type === 'percent') {
-			// For percent: amount is the percentage of original price (e.g., 200 = 200% of original)
-			$adjusted = $price * ($amount / 100.0);
+			// For percent: amount is the percentage change (e.g., 10 = 10% increase, -10 = 10% decrease)
+			if ($direction === 'increase') {
+				$adjusted = $price * (1 + ($amount / 100.0));
+			} else {
+				$adjusted = $price * (1 - ($amount / 100.0));
+			}
 		} else {
 			// For fixed: amount is added/subtracted from original price
 			$adjusted = ($direction === 'decrease') ? ($price - $amount) : ($price + $amount);

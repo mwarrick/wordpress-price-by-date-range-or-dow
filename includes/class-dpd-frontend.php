@@ -138,18 +138,21 @@ class DPD_Frontend {
 		
 		check_ajax_referer(self::NONCE_KEY, 'nonce');
 		$product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
+		$variation_id = isset($_POST['variation_id']) ? intval($_POST['variation_id']) : 0;
 		$val = isset($_POST['datetime']) ? sanitize_text_field(wp_unslash($_POST['datetime'])) : '';
 		
-		error_log('DPD AJAX: Product ID: ' . $product_id . ', DateTime: ' . $val);
+		error_log('DPD AJAX: Product ID: ' . $product_id . ', Variation ID: ' . $variation_id . ', DateTime: ' . $val);
 		
 		if (!$product_id || empty($val)) { 
 			error_log('DPD AJAX: Bad request - missing product_id or datetime');
 			wp_send_json_error(['message' => 'bad_request'], 400); 
 		}
 		
-		$product = wc_get_product($product_id);
+		// Use variation ID if provided, otherwise use product ID
+		$target_id = $variation_id ? $variation_id : $product_id;
+		$product = wc_get_product($target_id);
 		if (!$product) { 
-			error_log('DPD AJAX: Product not found for ID: ' . $product_id);
+			error_log('DPD AJAX: Product not found for ID: ' . $target_id);
 			wp_send_json_error(['message' => 'not_found'], 404); 
 		}
 		
@@ -175,6 +178,11 @@ class DPD_Frontend {
 		$global_rules = DPD_Rules::get_global_rules();
 		error_log('DPD AJAX: All global rules: ' . print_r($global_rules, true));
 		
+		// Get product rules too
+		$product_rules = DPD_Rules::get_product_rules($product_id);
+		error_log('DPD AJAX: Product rules for ID ' . $product_id . ': ' . print_r($product_rules, true));
+		
+		// Use the main product ID for rule lookup, not the variation ID
 		$rule = DPD_Pricing::get_rule_for_context($product_id, $ctx);
 		$adjusted = $rule ? DPD_Rules::apply_rule_to_price(floatval($price), $rule) : floatval($price);
 		
@@ -182,6 +190,14 @@ class DPD_Frontend {
 		if ($rule) {
 			error_log('DPD AJAX: Rule details - DoW: ' . ($rule['dow'] ?? 'empty') . ', Date range: ' . ($rule['date_start'] ?? 'empty') . ' to ' . ($rule['date_end'] ?? 'empty'));
 			error_log('DPD AJAX: Full rule data: ' . print_r($rule, true));
+		} else {
+			error_log('DPD AJAX: No rule found - Context DoW: ' . $ctx['dow'] . ', Date: ' . $ctx['date']);
+			// Debug each rule individually
+			$all_rules = array_merge($product_rules, $global_rules);
+			foreach ($all_rules as $idx => $test_rule) {
+				$matches = DPD_Rules::rule_matches($test_rule, $ctx['dow'], $ctx['date']);
+				error_log('DPD AJAX: Rule ' . $idx . ' match result: ' . ($matches ? 'YES' : 'NO') . ' - Rule: ' . print_r($test_rule, true));
+			}
 		}
 		
 		wp_send_json_success([
@@ -190,6 +206,15 @@ class DPD_Frontend {
 			'original_price' => $price,
 			'rule_applied' => $rule ? 'yes' : 'no',
 			'context' => $ctx,
+			'variation_id' => $variation_id,
+			'debug' => [
+				'product_id' => $product_id,
+				'target_id' => $target_id,
+				'global_rules_count' => count($global_rules),
+				'product_rules_count' => count($product_rules),
+				'context_dow' => $ctx['dow'],
+				'context_date' => $ctx['date'],
+			],
 		]);
 	}
 }

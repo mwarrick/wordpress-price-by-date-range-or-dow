@@ -19,27 +19,54 @@
 	var requestUpdate = debounce(function(){
 		var val = $('#dpd_selected_datetime').val();
 		var productId = $('#dpd_product_id').val();
-		console.log('DPD Debug - AJAX request with val:', val, 'productId:', productId);
+		var variationId = $('input[name="variation_id"]').val();
+		console.log('DPD Debug - AJAX request with val:', val, 'productId:', productId, 'variationId:', variationId);
 		if (!val || !productId) {
 			console.log('DPD Debug - Skipping AJAX request - missing datetime or product ID');
 			return;
 		}
-		$.post(DPD_FRONTEND.ajax_url, {
+		var ajaxData = {
 			action: 'dpd_get_price',
 			nonce: DPD_FRONTEND.nonce,
 			product_id: productId,
 			datetime: val
-		}, function(resp){
+		};
+		if (variationId) {
+			ajaxData.variation_id = variationId;
+		}
+		$.post(DPD_FRONTEND.ajax_url, ajaxData, function(resp){
 			console.log('DPD Debug - AJAX response:', resp);
 			console.log('DPD Debug - Response data:', resp.data);
+			if (resp.data && resp.data.debug) {
+				console.log('DPD Debug - Debug info:', resp.data.debug);
+			}
 			if (resp && resp.success && resp.data && resp.data.price) {
-				var $price = $('.summary .price, .entry-summary .price').first();
-				if ($price.length) { 
-					$price.html(resp.data.price);
-					console.log('DPD Debug - Updated price display to:', resp.data.price);
-					console.log('DPD Debug - Original price was:', resp.data.original_price || 'unknown');
-					console.log('DPD Debug - Adjusted price is:', resp.data.value || 'unknown');
+				// Update price display for both simple and variable products
+				var isVariableProduct = $('.variations_form').length > 0;
+				if (isVariableProduct) {
+					// For variable products, update the variation price if one is selected
+					var $variationPrice = $('.woocommerce-variation-price .price, .woocommerce-variation .price');
+					if ($variationPrice.length) {
+						$variationPrice.html(resp.data.price);
+						console.log('DPD Debug - Updated variation price to:', resp.data.price);
+					} else {
+						// No variation selected yet, update the main price range
+						var $price = $('.summary .price, .entry-summary .price').first();
+						if ($price.length) { 
+							$price.html(resp.data.price);
+							console.log('DPD Debug - Updated main price to:', resp.data.price);
+						}
+					}
+				} else {
+					// Simple product - update the price directly
+					var $price = $('.summary .price, .entry-summary .price').first();
+					if ($price.length) { 
+						$price.html(resp.data.price);
+						console.log('DPD Debug - Updated price display to:', resp.data.price);
+					}
 				}
+				console.log('DPD Debug - Original price was:', resp.data.original_price || 'unknown');
+				console.log('DPD Debug - Adjusted price is:', resp.data.value || 'unknown');
 			} else {
 				if (window.console && console.warn) { console.warn('DPD price update failed', resp); }
 			}
@@ -50,6 +77,17 @@
 	$(document).on('change input', '#dpd_date, #dpd_time', function(){
 		updateHidden();
 		requestUpdate();
+	});
+	
+	// Handle variation selection for variable products
+	$(document).on('found_variation', '.variations_form', function(event, variation) {
+		console.log('DPD Debug - Variation selected:', variation);
+		// When a variation is selected, update the price if date/time is selected
+		var val = $('#dpd_selected_datetime').val();
+		if (val) {
+			// Trigger a price update for the selected variation
+			requestUpdate();
+		}
 	});
 	
 	// Ensure hidden field is updated before form submission
