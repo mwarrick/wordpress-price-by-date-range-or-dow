@@ -95,6 +95,22 @@
 		$row.remove();
 	});
 
+	// Delete all product rules: clears tbody and triggers save
+	$(document).on('click', '#dpd-delete-all-product-rules', function(){
+		var $tbody = $('#dpd-product-rules-body');
+		if (!$tbody.length) { return; }
+		if (!confirm('Delete all pricing rules for this product?')) { return; }
+		$tbody.empty();
+		// Submit the closest form to persist deletion
+		var $form = $(this).closest('form');
+		// If our button is outside the form (in metabox), find product edit form
+		if (!$form.length) { $form = $('#post'); }
+		// Ensure nonce exists; metabox rendered it already
+		$form.find('input[name="dpd_save_product_rules"]').remove();
+		$form.append('<input type="hidden" name="dpd_save_product_rules" value="1" />');
+		$form.trigger('submit');
+	});
+
 	// Prune blank rows on submit for both global and product forms
 	$(document).on('submit', 'form', function(){
 		var $form = $(this);

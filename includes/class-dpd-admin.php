@@ -402,6 +402,7 @@ class DPD_Admin {
 			</table>
 			<p>
 				<button type="button" class="button button-secondary" id="dpd-add-product-row"><?php esc_html_e('Add Rule', 'dpd'); ?></button>
+				<button type="button" class="button" id="dpd-delete-all-product-rules"><?php esc_html_e('Delete All Rules', 'dpd'); ?></button>
 				<button type="submit" class="button button-primary" name="dpd_save_product_rules" value="1"><?php esc_html_e('Save Pricing Rules', 'dpd'); ?></button>
 			</p>
 		</div>
