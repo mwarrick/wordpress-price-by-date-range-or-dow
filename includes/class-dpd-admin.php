@@ -446,19 +446,35 @@ class DPD_Admin {
 	}
 
 	public static function save_product_rules_from_product_object(WC_Product $product): void {
+		error_log('DPD Product Save: Handler called for product ID ' . $product->get_id());
+		
 		// Only proceed if our nonce is present and valid
-		if (!isset($_POST['dpd_product_nonce']) || !wp_verify_nonce($_POST['dpd_product_nonce'], 'dpd_save_product_rules')) { return; }
+		if (!isset($_POST['dpd_product_nonce']) || !wp_verify_nonce($_POST['dpd_product_nonce'], 'dpd_save_product_rules')) { 
+			error_log('DPD Product Save: Nonce check failed or missing');
+			return; 
+		}
+		
+		error_log('DPD Product Save: Nonce check passed');
+		
 		// If Delete All (Save) was clicked, delete and return
 		if (isset($_POST['dpd_delete_all_product_rules'])) {
+			error_log('DPD Product Save: Delete All action detected');
 			delete_post_meta($product->get_id(), DPD_Rules::META_PRODUCT_RULES);
 			return;
 		}
+		
 		$rules = isset($_POST['dpd_product_rules']) && is_array($_POST['dpd_product_rules']) ? $_POST['dpd_product_rules'] : [];
+		error_log('DPD Product Save: Raw rules posted: ' . print_r($rules, true));
+		
 		$clean = DPD_Rules::sanitize_rules_array($rules);
+		error_log('DPD Product Save: Cleaned rules: ' . print_r($clean, true));
+		
 		if (!empty($clean)) {
 			DPD_Rules::save_product_rules($product->get_id(), $clean);
+			error_log('DPD Product Save: Rules saved successfully');
 		} else {
 			delete_post_meta($product->get_id(), DPD_Rules::META_PRODUCT_RULES);
+			error_log('DPD Product Save: No valid rules, deleted existing rules');
 		}
 	}
 
