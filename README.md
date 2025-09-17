@@ -17,6 +17,7 @@ A comprehensive WordPress plugin that dynamically adjusts WooCommerce product pr
 - **Real-Time Price Updates**: Prices update instantly as users select dates/times
 - **Configurable Time Range**: Admin can set business hours (e.g., 6 AM to 8 PM)
 - **30-Minute Intervals**: Time selection in convenient 30-minute increments
+- **Transparent Pricing**: Clear explanations in cart showing why prices differ from product page
 
 ### 🛠️ Admin Features
 - **Separate Settings Forms**: Time range settings and pricing rules have independent forms
@@ -30,6 +31,7 @@ A comprehensive WordPress plugin that dynamically adjusts WooCommerce product pr
 - **AJAX Price Updates**: Smooth user experience with real-time price changes
 - **Complete Cart Integration**: Selected date/time stored in cart and order data with consistent pricing
 - **Variable Product Support**: Full support for WooCommerce variable products and variations
+- **Transparent Pricing Display**: Clear explanations of price adjustments in cart and orders
 - **WooCommerce Compatible**: Works with all WooCommerce product types
 - **Translation Ready**: Full internationalization support
 
@@ -87,6 +89,23 @@ Navigate to **WooCommerce → Dynamic Pricing by Date**:
 - **Direction**: Decrease
 - **Amount**: 20
 - **Result**: 80% of original price (20% discount)
+
+## Cart Transparency
+
+When dynamic pricing is applied, users see clear explanations:
+
+### Cart Display Example
+**Product**: Tour Package (Base: $100-$175)
+**Selected**: Sunday, 2 people ($125 base price)
+**Cart Shows**:
+- **Selected Date/Time**: 09/21/2025 @ 08:00
+- **Pricing Adjustment**: Price increased by 100% for Sunday (Base: $125.00)
+- **Final Price**: $250.00
+
+### General Cart Notice
+When any items have dynamic pricing, a blue notice appears:
+> **Dynamic Pricing Applied**  
+> Prices shown below reflect dynamic pricing adjustments based on your selected dates and times. See individual item details for specific adjustments.
 
 ## Diagnostics
 

@@ -17,6 +17,7 @@ class DPD_Frontend {
 		add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_assets']);
 		add_action('wp_ajax_dpd_get_price', [__CLASS__, 'ajax_get_price']);
 		add_action('wp_ajax_nopriv_dpd_get_price', [__CLASS__, 'ajax_get_price']);
+		add_action('woocommerce_before_cart_table', [__CLASS__, 'display_cart_pricing_notice']);
 	}
 
 	public static function render_datetime_field(): void {
@@ -100,13 +101,92 @@ class DPD_Frontend {
 				'key'   => __('Selected Date/Time', 'dpd'),
 				'value' => esc_html($formatted),
 			];
+			
+			// Add pricing explanation if rules are applied
+			$pricing_explanation = self::get_pricing_explanation($cart_item);
+			if ($pricing_explanation) {
+				$item_data[] = [
+					'key'   => __('Pricing Adjustment', 'dpd'),
+					'value' => $pricing_explanation,
+				];
+			}
 		}
 		return $item_data;
+	}
+	
+	protected static function get_pricing_explanation($cart_item): ?string {
+		if (empty($cart_item[self::FIELD_KEY])) {
+			return null;
+		}
+		
+		$product_id = $cart_item['variation_id'] ?: $cart_item['product_id'];
+		$product = wc_get_product($product_id);
+		if (!$product) {
+			return null;
+		}
+		
+		$original_price = $product->get_price();
+		$val = $cart_item[self::FIELD_KEY];
+		
+		// Parse datetime
+		$dt = date_create_immutable_from_format('Y-m-d\TH:i', $val, wp_timezone());
+		if (!$dt) {
+			return null;
+		}
+		
+		$ctx = [
+			'dow' => (int)wp_date('w', $dt->getTimestamp()),
+			'date' => wp_date('Y-m-d', $dt->getTimestamp())
+		];
+		
+		// Get rules and check if pricing is adjusted
+		$main_product_id = $cart_item['product_id'];
+		$rule = DPD_Pricing::get_rule_for_context($main_product_id, $ctx);
+		
+		if ($rule) {
+			$adjusted_price = DPD_Rules::apply_rule_to_price(floatval($original_price), $rule);
+			
+			// Only show explanation if price is actually different
+			if ($adjusted_price != $original_price) {
+				$day_name = wp_date('l', $dt->getTimestamp());
+				$rule_type = $rule['type'] === 'percent' ? 'percentage' : 'fixed amount';
+				$rule_direction = $rule['direction'] === 'increase' ? 'increased' : 'reduced';
+				$rule_amount = $rule['amount'];
+				
+				if ($rule['type'] === 'percent') {
+					$explanation = sprintf(
+						__('Price %s by %s%% for %s (Base: %s)', 'dpd'),
+						$rule_direction,
+						$rule_amount,
+						$day_name,
+						wc_price($original_price)
+					);
+				} else {
+					$explanation = sprintf(
+						__('Price %s by %s for %s (Base: %s)', 'dpd'),
+						$rule_direction,
+						wc_price($rule_amount),
+						$day_name,
+						wc_price($original_price)
+					);
+				}
+				
+				return $explanation;
+			}
+		}
+		
+		return null;
 	}
 
 	public static function add_order_item_meta($item, $cart_item_key, $values, $order) {
 		if (!empty($values[self::FIELD_KEY])) {
 			$item->add_meta_data(__('Selected Date/Time', 'dpd'), self::format_datetime_display($values[self::FIELD_KEY]), true);
+			
+			// Add pricing explanation to order
+			$pricing_explanation = self::get_pricing_explanation($values);
+			if ($pricing_explanation) {
+				$item->add_meta_data(__('Pricing Adjustment', 'dpd'), $pricing_explanation, true);
+			}
 		}
 	}
 
@@ -115,6 +195,31 @@ class DPD_Frontend {
 		if (!$ts) { return $val; }
 		// Format as mm/dd/yyyy @ hh:mm (site timezone assumed by WP time functions)
 		return date_i18n('m/d/Y \@ H:i', $ts);
+	}
+	
+	public static function display_cart_pricing_notice(): void {
+		if (!function_exists('WC') || !WC()->cart || WC()->cart->is_empty()) {
+			return;
+		}
+		
+		// Check if any cart items have dynamic pricing applied
+		$has_dynamic_pricing = false;
+		foreach (WC()->cart->get_cart() as $cart_item) {
+			if (!empty($cart_item[self::FIELD_KEY])) {
+				$pricing_explanation = self::get_pricing_explanation($cart_item);
+				if ($pricing_explanation) {
+					$has_dynamic_pricing = true;
+					break;
+				}
+			}
+		}
+		
+		if ($has_dynamic_pricing) {
+			echo '<div class="woocommerce-info dpd-cart-notice" style="margin-bottom: 20px; padding: 15px; background: #f0f8ff; border-left: 4px solid #0073aa; border-radius: 4px;">';
+			echo '<strong>' . esc_html__('Dynamic Pricing Applied', 'dpd') . '</strong><br>';
+			echo esc_html__('Prices shown below reflect dynamic pricing adjustments based on your selected dates and times. See individual item details for specific adjustments.', 'dpd');
+			echo '</div>';
+		}
 	}
 
 	public static function enqueue_assets(): void {
