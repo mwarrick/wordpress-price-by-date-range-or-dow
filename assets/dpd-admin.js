@@ -94,4 +94,23 @@
 		if ($next.length && !$next.hasClass('dpd-rule-row')) { $next.remove(); }
 		$row.remove();
 	});
+
+	// Date validation - prevent past dates
+	$(document).on('change', 'input[type="date"]', function(){
+		var $input = $(this);
+		var selectedDate = new Date($input.val());
+		var today = new Date();
+		today.setHours(0, 0, 0, 0); // Reset time to start of day
+		
+		if (selectedDate < today) {
+			alert('Please select a date in the future. Past dates are not allowed.');
+			$input.val('');
+		}
+	});
+
+	// Set minimum date to today for all date inputs
+	$(document).ready(function(){
+		var today = new Date().toISOString().split('T')[0];
+		$('input[type="date"]').attr('min', today);
+	});
 })(jQuery);

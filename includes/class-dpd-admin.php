@@ -5,6 +5,13 @@ if (!defined('ABSPATH')) {
 
 class DPD_Admin {
 	public static function init(): void {
+		// Debug: Add admin notice to confirm admin class is loading
+		add_action('admin_notices', function() {
+			if (current_user_can('manage_woocommerce')) {
+				echo '<div class="notice notice-info"><p>DPD Admin initialized successfully</p></div>';
+			}
+		});
+		
 		add_action('admin_menu', [__CLASS__, 'add_menu']);
 		add_action('add_meta_boxes', [__CLASS__, 'add_product_metabox']);
 		add_action('save_post_product', [__CLASS__, 'save_product_rules']);
@@ -24,10 +31,18 @@ class DPD_Admin {
 			'dpd-settings',
 			[__CLASS__, 'render_settings_page']
 		);
+		add_submenu_page(
+			'woocommerce',
+			__('DPD Diagnostics', 'dpd'),
+			__('DPD Diagnostics', 'dpd'),
+			'manage_woocommerce',
+			'dpd-diagnostics',
+			[__CLASS__, 'render_diagnostics_page']
+		);
 	}
 
 	public static function enqueue_admin_assets($hook): void {
-		if ($hook === 'woocommerce_page_dpd-settings' || $hook === 'post.php' || $hook === 'post-new.php') {
+		if ($hook === 'woocommerce_page_dpd-settings' || $hook === 'woocommerce_page_dpd-diagnostics' || $hook === 'post.php' || $hook === 'post-new.php') {
 			wp_enqueue_style('dpd-admin', DPD_PLUGIN_URL . 'assets/dpd-admin.css', [], DPD_VERSION);
 			wp_enqueue_script('dpd-admin', DPD_PLUGIN_URL . 'assets/dpd-admin.js', ['jquery'], DPD_VERSION, true);
 		}
@@ -36,19 +51,89 @@ class DPD_Admin {
 	public static function render_settings_page(): void {
 		if (!current_user_can('manage_woocommerce')) { return; }
 		$notice = '';
+		// Handle time range settings form
+		if (isset($_POST['dpd_save_time_settings']) && check_admin_referer('dpd_save_time_settings_action', 'dpd_time_nonce')) {
+			$time_start = sanitize_text_field($_POST['dpd_time_start'] ?? '06:00');
+			$time_end = sanitize_text_field($_POST['dpd_time_end'] ?? '20:00');
+			
+			// Debug: Log what we're trying to save
+			error_log('DPD Admin: Saving time settings - Start: ' . $time_start . ', End: ' . $time_end);
+			
+			update_option('dpd_time_start', $time_start);
+			update_option('dpd_time_end', $time_end);
+			
+			// Debug: Verify what was actually saved
+			$saved_start = get_option('dpd_time_start');
+			$saved_end = get_option('dpd_time_end');
+			error_log('DPD Admin: Verified saved settings - Start: ' . $saved_start . ', End: ' . $saved_end);
+			
+			$notice = __('Time settings saved.', 'dpd');
+		}
+		
+		// Handle pricing rules form
 		if (isset($_POST['dpd_save_global']) && check_admin_referer('dpd_save_global_action', 'dpd_nonce')) {
 			$rules = isset($_POST['dpd_rules']) && is_array($_POST['dpd_rules']) ? $_POST['dpd_rules'] : [];
 			$clean = DPD_Rules::sanitize_rules_array($rules);
 			DPD_Rules::save_global_rules($clean);
-			$notice = __('Saved.', 'dpd');
+			$notice = __('Pricing rules saved.', 'dpd');
 		}
 		$rules = DPD_Rules::get_global_rules();
+		$time_start = get_option('dpd_time_start', '06:00');
+		$time_end = get_option('dpd_time_end', '20:00');
+		
+		// Debug: Show current values
+		error_log('DPD Admin: Current time settings - Start: ' . $time_start . ', End: ' . $time_end);
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e('Dynamic Pricing by Date — Global Rules', 'dpd'); ?></h1>
 			<?php if ($notice): ?>
 				<div class="notice notice-success is-dismissible"><p><?php echo esc_html($notice); ?></p></div>
 			<?php endif; ?>
+			
+			<h2><?php esc_html_e('Time Range Settings', 'dpd'); ?></h2>
+			<p><?php esc_html_e('Set the available time range for tour bookings. Times outside this range will not be selectable.', 'dpd'); ?></p>
+			<form method="post">
+				<?php wp_nonce_field('dpd_save_time_settings_action', 'dpd_time_nonce'); ?>
+				<table class="form-table">
+					<tr>
+						<th scope="row"><?php esc_html_e('Start Time', 'dpd'); ?></th>
+						<td>
+							<select name="dpd_time_start">
+								<?php
+								for ($h = 0; $h < 24; $h++) {
+									foreach (['00','30'] as $m) {
+										$val = sprintf('%02d:%s', $h, $m);
+										$selected = ($val === $time_start) ? ' selected' : '';
+										echo '<option value="' . esc_attr($val) . '"' . $selected . '>' . esc_html($val) . '</option>';
+									}
+								}
+								?>
+							</select>
+							<p class="description"><?php esc_html_e('Earliest time available for booking', 'dpd'); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e('End Time', 'dpd'); ?></th>
+						<td>
+							<select name="dpd_time_end">
+								<?php
+								for ($h = 0; $h < 24; $h++) {
+									foreach (['00','30'] as $m) {
+										$val = sprintf('%02d:%s', $h, $m);
+										$selected = ($val === $time_end) ? ' selected' : '';
+										echo '<option value="' . esc_attr($val) . '"' . $selected . '>' . esc_html($val) . '</option>';
+									}
+								}
+								?>
+							</select>
+							<p class="description"><?php esc_html_e('Latest time available for booking', 'dpd'); ?></p>
+						</td>
+					</tr>
+				</table>
+				<?php submit_button(__('Save Time Settings', 'dpd'), 'primary', 'dpd_save_time_settings'); ?>
+			</form>
+			
+			<h2><?php esc_html_e('Global Pricing Rules', 'dpd'); ?></h2>
 			<form method="post">
 				<?php wp_nonce_field('dpd_save_global_action', 'dpd_nonce'); ?>
 				<table class="widefat dpd-rules-table">
@@ -111,6 +196,145 @@ class DPD_Admin {
 				<p><button type="submit" class="button button-primary" name="dpd_save_global" value="1"><?php esc_html_e('Save Changes', 'dpd'); ?></button></p>
 			</form>
 		</div>
+		<?php
+	}
+
+	public static function render_diagnostics_page(): void {
+		if (!current_user_can('manage_woocommerce')) { return; }
+		
+		// Test data
+		$test_date = '2025-09-21'; // Sunday
+		$test_time = '07:00';
+		$test_datetime = $test_date . 'T' . $test_time;
+		$test_product_id = 2118; // Use a real product ID
+		
+		// Get current context
+		$current_context = DPD_Rules::today_context();
+		
+		// Test rule matching
+		$global_rules = DPD_Rules::get_global_rules();
+		$applicable_global_rules = DPD_Rules::filter_rules_for_apply($global_rules);
+		
+		// Debug rule data
+		error_log('DPD Diagnostics - All global rules: ' . print_r($global_rules, true));
+		error_log('DPD Diagnostics - Applicable rules: ' . print_r($applicable_global_rules, true));
+		
+		// Test specific date context - parse as site timezone
+		$dt = date_create_immutable_from_format('Y-m-d\TH:i', $test_datetime, wp_timezone());
+		$test_ts = $dt ? $dt->getTimestamp() : strtotime($test_datetime);
+		$test_context = [
+			'dow' => (int)wp_date('w', $test_ts),
+			'date' => wp_date('Y-m-d', $test_ts)
+		];
+		
+		// Test rule matching for specific date
+		$matching_rules = [];
+		foreach ($applicable_global_rules as $rule) {
+			if (DPD_Rules::rule_matches($rule, $test_context['dow'], $test_context['date'])) {
+				$matching_rules[] = $rule;
+			}
+		}
+		
+		// Test product pricing
+		$test_product = wc_get_product($test_product_id);
+		$original_price = $test_product ? $test_product->get_price() : 'N/A';
+		
+		// Test pricing logic
+		$rule = DPD_Pricing::get_rule_for_context($test_product_id, $test_context);
+		
+		// Debug the rule data
+		error_log('DPD Diagnostics - Rule data: ' . print_r($rule, true));
+		error_log('DPD Diagnostics - Original price: ' . $original_price);
+		error_log('DPD Diagnostics - Test context: ' . print_r($test_context, true));
+		
+		$adjusted_price = $rule ? DPD_Rules::apply_rule_to_price(floatval($original_price), $rule) : floatval($original_price);
+		
+		?>
+		<div class="wrap">
+			<h1><?php esc_html_e('DPD Diagnostics', 'dpd'); ?></h1>
+			
+			<h2>System Information</h2>
+			<table class="widefat">
+				<tr><td><strong>Plugin Version:</strong></td><td><?php echo DPD_VERSION; ?></td></tr>
+				<tr><td><strong>WordPress Version:</strong></td><td><?php echo get_bloginfo('version'); ?></td></tr>
+				<tr><td><strong>WooCommerce Active:</strong></td><td><?php echo class_exists('WooCommerce') ? 'Yes' : 'No'; ?></td></tr>
+				<tr><td><strong>Current Time:</strong></td><td><?php echo current_time('Y-m-d H:i:s'); ?></td></tr>
+				<tr><td><strong>Current Context:</strong></td><td>DoW: <?php echo $current_context['dow']; ?>, Date: <?php echo $current_context['date']; ?></td></tr>
+			</table>
+			
+			<h2>Test Configuration</h2>
+			<table class="widefat">
+				<tr><td><strong>Test Date:</strong></td><td><?php echo $test_date; ?> (Sunday)</td></tr>
+				<tr><td><strong>Test Time:</strong></td><td><?php echo $test_time; ?></td></tr>
+				<tr><td><strong>Test DateTime:</strong></td><td><?php echo $test_datetime; ?></td></tr>
+				<tr><td><strong>Test Product ID:</strong></td><td><?php echo $test_product_id; ?></td></tr>
+				<tr><td><strong>Test Context:</strong></td><td>DoW: <?php echo $test_context['dow']; ?>, Date: <?php echo $test_context['date']; ?></td></tr>
+			</table>
+			
+			<h2>Global Rules</h2>
+			<table class="widefat">
+				<thead>
+					<tr>
+						<th>Enabled</th>
+						<th>Day of Week</th>
+						<th>Start Date</th>
+						<th>End Date</th>
+						<th>Type</th>
+						<th>Direction</th>
+						<th>Amount</th>
+						<th>Matches Test Date?</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ($global_rules as $rule): ?>
+					<tr>
+						<td><?php echo $rule['enabled'] ? 'Yes' : 'No'; ?></td>
+						<td><?php echo $rule['dow'] ?: 'Any'; ?></td>
+						<td><?php echo $rule['date_start'] ?: 'Any'; ?></td>
+						<td><?php echo $rule['date_end'] ?: 'Any'; ?></td>
+						<td><?php echo $rule['type']; ?></td>
+						<td><?php echo $rule['direction']; ?></td>
+						<td><?php echo $rule['amount']; ?></td>
+						<td><?php echo DPD_Rules::rule_matches($rule, $test_context['dow'], $test_context['date']) ? 'YES' : 'No'; ?></td>
+					</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+			
+			<h2>Pricing Test</h2>
+			<table class="widefat">
+				<tr><td><strong>Test Product:</strong></td><td><?php echo $test_product ? $test_product->get_name() : 'Not found'; ?></td></tr>
+				<tr><td><strong>Original Price:</strong></td><td><?php echo $original_price; ?></td></tr>
+				<tr><td><strong>Matching Rule:</strong></td><td><?php echo $rule ? 'Yes' : 'No'; ?></td></tr>
+				<?php if ($rule): ?>
+				<tr><td><strong>Rule Details:</strong></td><td><?php echo $rule['type'] . ' ' . $rule['direction'] . ' by ' . $rule['amount']; ?></td></tr>
+				<?php endif; ?>
+				<tr><td><strong>Adjusted Price:</strong></td><td><?php echo $adjusted_price; ?></td></tr>
+			</table>
+			
+			<h2>AJAX Test</h2>
+			<p>Test the AJAX endpoint directly:</p>
+			<button type="button" id="test-ajax" class="button">Test AJAX Request</button>
+			<div id="ajax-result" style="margin-top: 10px; padding: 10px; background: #f0f0f0; display: none;"></div>
+		</div>
+		
+		<script>
+		jQuery(document).ready(function($) {
+			$('#test-ajax').click(function() {
+				$('#ajax-result').show().html('Testing...');
+				$.post(ajaxurl, {
+					action: 'dpd_get_price',
+					nonce: '<?php echo wp_create_nonce('dpd_ajax_nonce'); ?>',
+					product_id: <?php echo $test_product_id; ?>,
+					datetime: '<?php echo $test_datetime; ?>'
+				}, function(resp) {
+					$('#ajax-result').html('<pre>' + JSON.stringify(resp, null, 2) + '</pre>');
+				}).fail(function(xhr) {
+					$('#ajax-result').html('<strong>Error:</strong> ' + xhr.responseText);
+				});
+			});
+		});
+		</script>
 		<?php
 	}
 
@@ -212,6 +436,8 @@ class DPD_Admin {
 
 	public static function save_product_rules_from_product_object(WC_Product $product): void {
 		if (!isset($_POST['dpd_product_rules'])) { return; }
+		// Require the same nonce used by the metabox UI to avoid unintended writes
+		if (!isset($_POST['dpd_product_nonce']) || !wp_verify_nonce($_POST['dpd_product_nonce'], 'dpd_save_product_rules')) { return; }
 		$rules = is_array($_POST['dpd_product_rules']) ? $_POST['dpd_product_rules'] : [];
 		$clean = DPD_Rules::sanitize_rules_array($rules);
 		if (!empty($clean)) {

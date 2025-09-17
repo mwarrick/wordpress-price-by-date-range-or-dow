@@ -44,25 +44,37 @@ class DPD_Pricing {
 			foreach (WC()->cart->get_cart() as $cart_item_key => $cart_item) {
 				if (!empty($cart_item['product_id']) && intval($cart_item['product_id']) === $product_id && !empty($cart_item[DPD_Frontend::FIELD_KEY])) {
 					$val = $cart_item[DPD_Frontend::FIELD_KEY];
-					// Expecting YYYY-MM-DDTHH:MM
-					$parsed = strtotime($val);
-					if ($parsed) { $use_ts = $parsed; break; }
+					// Expecting site-local YYYY-MM-DDTHH:MM
+					$dt = date_create_immutable_from_format('Y-m-d\TH:i', $val, wp_timezone());
+					if ($dt instanceof DateTimeImmutable) { $use_ts = $dt->getTimestamp(); break; }
 				}
 			}
 		}
 		return [
-			'dow'  => (int)gmdate('w', $use_ts),
-			'date' => gmdate('Y-m-d', $use_ts),
+			'dow'  => (int)wp_date('w', $use_ts),
+			'date' => wp_date('Y-m-d', $use_ts),
 		];
 	}
 
 	protected static function pick_rule_with_context(array $rules, ?array $ctx): ?array {
-		if (empty($rules)) { return null; }
-		if (!$ctx) { return DPD_Rules::pick_applicable_rule($rules); }
+		if (empty($rules)) { 
+			error_log('DPD Pick Rule: No rules to check');
+			return null; 
+		}
+		if (!$ctx) { 
+			error_log('DPD Pick Rule: No context, using pick_applicable_rule');
+			return DPD_Rules::pick_applicable_rule($rules); 
+		}
+		error_log('DPD Pick Rule: Checking ' . count($rules) . ' rules with context: DoW=' . $ctx['dow'] . ', Date=' . $ctx['date']);
 		$match = null;
 		foreach ($rules as $rule) {
-			if (DPD_Rules::rule_matches($rule, $ctx['dow'], $ctx['date'])) { $match = $rule; }
+			error_log('DPD Pick Rule: Checking rule - DoW: ' . ($rule['dow'] ?? 'empty') . ', Date range: ' . ($rule['date_start'] ?? 'empty') . ' to ' . ($rule['date_end'] ?? 'empty'));
+			if (DPD_Rules::rule_matches($rule, $ctx['dow'], $ctx['date'])) { 
+				error_log('DPD Pick Rule: Rule matched!');
+				$match = $rule; 
+			}
 		}
+		error_log('DPD Pick Rule: Final result: ' . ($match ? 'Found match' : 'No match'));
 		return $match;
 	}
 
@@ -84,8 +96,9 @@ class DPD_Pricing {
 		if (!$product instanceof WC_Product_Variable) { return $price_html; }
 		$prices = $product->get_variation_prices(true);
 		if (empty($prices['price'])) { return $price_html; }
-		$min = current($prices['price']);
-		$max = end($prices['price']);
+		$vals = array_values($prices['price']);
+		$min = min($vals);
+		$max = max($vals);
 		if ($min === $max) { return wc_price($min); }
 		return wc_price($min) . ' - ' . wc_price($max);
 	}
