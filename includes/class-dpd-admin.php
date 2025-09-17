@@ -365,6 +365,7 @@ class DPD_Admin {
 		<div class="dpd-metabox">
 			<p><?php esc_html_e('Per-product rules override global rules. Leave empty to use global.', 'dpd'); ?></p>
 			<p><em><?php esc_html_e('Use the button below to save pricing rules without updating other product fields.', 'dpd'); ?></em></p>
+			<input type="hidden" name="dpd_save_product_rules" value="1" />
 			<table class="dpd-rules-table small">
 				<thead>
 					<tr>
@@ -407,6 +408,7 @@ class DPD_Admin {
 			<p>
 				<button type="button" class="button button-secondary" id="dpd-add-product-row"><?php esc_html_e('Add Rule', 'dpd'); ?></button>
 				<button type="button" class="button" id="dpd-delete-all-product-rules"><?php esc_html_e('Delete All Rules', 'dpd'); ?></button>
+				<button type="submit" class="button" name="dpd_delete_all_product_rules" value="1"><?php esc_html_e('Delete All (Save)', 'dpd'); ?></button>
 				<button type="submit" class="button button-primary" name="dpd_save_product_rules" value="1"><?php esc_html_e('Save Pricing Rules', 'dpd'); ?></button>
 			</p>
 		</div>
@@ -446,17 +448,16 @@ class DPD_Admin {
 	public static function save_product_rules_from_product_object(WC_Product $product): void {
 		// Only proceed if our nonce is present and valid
 		if (!isset($_POST['dpd_product_nonce']) || !wp_verify_nonce($_POST['dpd_product_nonce'], 'dpd_save_product_rules')) { return; }
-		$has_rules_post = isset($_POST['dpd_product_rules']);
-		$explicit_save  = isset($_POST['dpd_save_product_rules']);
-		// If neither rules were posted nor explicit save requested, skip
-		if (!$has_rules_post && !$explicit_save) { return; }
-		
-		$rules = $has_rules_post && is_array($_POST['dpd_product_rules']) ? $_POST['dpd_product_rules'] : [];
+		// If Delete All (Save) was clicked, delete and return
+		if (isset($_POST['dpd_delete_all_product_rules'])) {
+			delete_post_meta($product->get_id(), DPD_Rules::META_PRODUCT_RULES);
+			return;
+		}
+		$rules = isset($_POST['dpd_product_rules']) && is_array($_POST['dpd_product_rules']) ? $_POST['dpd_product_rules'] : [];
 		$clean = DPD_Rules::sanitize_rules_array($rules);
 		if (!empty($clean)) {
 			DPD_Rules::save_product_rules($product->get_id(), $clean);
 		} else {
-			// Explicit delete when no rules after sanitization (covers Delete All)
 			delete_post_meta($product->get_id(), DPD_Rules::META_PRODUCT_RULES);
 		}
 	}
