@@ -379,6 +379,7 @@ class DPD_Admin {
 				</thead>
 				<tbody id="dpd-product-rules-body">
 				<?php foreach ($rules as $idx => $rule): ?>
+					<?php error_log('DPD Metabox: Rendering rule ' . $idx . ' - ' . print_r($rule, true)); ?>
 					<tr class="dpd-rule-row">
 						<td><input type="checkbox" name="dpd_product_rules[<?php echo esc_attr($idx); ?>][enabled]" value="1" <?php checked($rule['enabled'] ?? '0','1'); ?> /></td>
 						<td>
