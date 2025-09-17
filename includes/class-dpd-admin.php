@@ -20,6 +20,8 @@ class DPD_Admin {
 		add_filter('woocommerce_product_data_tabs', [__CLASS__, 'add_product_data_tab']);
 		add_action('woocommerce_product_data_panels', [__CLASS__, 'render_product_data_panel']);
 		add_action('woocommerce_admin_process_product_object', [__CLASS__, 'save_product_rules_from_product_object']);
+		// AJAX endpoints for product rules operations
+		add_action('wp_ajax_dpd_delete_all_product_rules', [__CLASS__, 'ajax_delete_all_product_rules']);
 	}
 
 	public static function add_menu(): void {
@@ -351,6 +353,8 @@ class DPD_Admin {
 
 	public static function render_product_metabox(WP_Post $post): void {
 		wp_nonce_field('dpd_save_product_rules', 'dpd_product_nonce');
+		// Provide product id for AJAX operations
+		echo '<input type="hidden" id="dpd_admin_product_id" value="' . esc_attr($post->ID) . '" />';
 		$rules = DPD_Rules::get_product_rules($post->ID);
 		if (empty($rules)) {
 			$rules = [[
@@ -455,5 +459,15 @@ class DPD_Admin {
 			// Explicit delete when no rules after sanitization (covers Delete All)
 			delete_post_meta($product->get_id(), DPD_Rules::META_PRODUCT_RULES);
 		}
+	}
+
+	public static function ajax_delete_all_product_rules(): void {
+		if (!current_user_can('edit_products')) { wp_send_json_error(['message' => 'forbidden']); }
+		$nonce = isset($_POST['nonce']) ? sanitize_text_field($_POST['nonce']) : '';
+		if (!$nonce || !wp_verify_nonce($nonce, 'dpd_save_product_rules')) { wp_send_json_error(['message' => 'bad_nonce']); }
+		$product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
+		if ($product_id <= 0) { wp_send_json_error(['message' => 'bad_product']); }
+		delete_post_meta($product_id, DPD_Rules::META_PRODUCT_RULES);
+		wp_send_json_success(['message' => 'deleted']);
 	}
 }
