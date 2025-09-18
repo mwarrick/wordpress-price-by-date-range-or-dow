@@ -1,8 +1,8 @@
 <?php
 /*
-Plugin Name: Dynamic Pricing by Date (Woo)
+Plugin Name: Dynamic Pricing by Date for Woocommerce
 Description: Adjust WooCommerce product prices by day-of-week and date range, with global and per-product rules.
-Version: 1.6.0
+Version: 1.7.0
 Author: Mark Warrick
 Text Domain: dpd
 */
@@ -11,10 +11,20 @@ if (!defined('ABSPATH')) {
 	return;
 }
 
-define('DPD_VERSION', '1.6.0');
+define('DPD_VERSION', '1.7.0');
 define('DPD_PLUGIN_FILE', __FILE__);
 define('DPD_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('DPD_PLUGIN_URL', plugin_dir_url(__FILE__));
+
+/**
+ * Conditional debug logging for DPD plugin
+ * Only logs if debug mode is enabled in admin settings
+ */
+function dpd_debug_log($message) {
+	if (get_option('dpd_debug_enabled', false)) {
+		error_log($message);
+	}
+}
 
 // Prevent double-initialization if another copy of the plugin is active
 if (defined('DPD_PLUGIN_LOADED')) {
@@ -55,18 +65,18 @@ add_action('plugins_loaded', function () {
 	if (class_exists('DPD_Admin')) {
 		DPD_Admin::init();
 	} else {
-		error_log('DPD_Admin class not found');
+		dpd_debug_log('DPD_Admin class not found');
 	}
 	
 	if (class_exists('DPD_Pricing')) {
 		DPD_Pricing::init();
 	} else {
-		error_log('DPD_Pricing class not found');
+		dpd_debug_log('DPD_Pricing class not found');
 	}
 	
 	if (class_exists('DPD_Frontend')) {
 		DPD_Frontend::init();
 	} else {
-		error_log('DPD_Frontend class not found');
+		dpd_debug_log('DPD_Frontend class not found');
 	}
 });

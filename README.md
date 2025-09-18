@@ -1,4 +1,4 @@
-# Dynamic Pricing by Date (WooCommerce) v1.6.0
+# Dynamic Pricing by Date for Woocommerce v1.7.0
 
 A comprehensive WordPress plugin that dynamically adjusts WooCommerce product prices based on date and time selection. Perfect for tour businesses, event bookings, and time-sensitive pricing.
 
@@ -138,6 +138,7 @@ For troubleshooting, use the built-in diagnostics page at **WooCommerce → DPD 
 
 ## Version History
 
+- **1.7.0**: Added admin toggle to enable/disable debug logging; replaced raw error_log calls with conditional logging; general refinements and stability improvements
 - **1.6.0**: Stable release with transparent pricing - Added cart pricing explanations, fixed CSS styling issues, removed interfering icons, enhanced user experience with clear pricing breakdowns
 - **1.5.0**: Complete cart integration - Fixed cart pricing for variable products, added comprehensive cart item pricing hooks, resolved frontend-to-cart price consistency, enhanced debugging system
 - **1.4.0**: Major stability improvements - Fixed duplicate UI rendering, enhanced per-product rules management, improved debugging, removed debug messages, better multisite compatibility

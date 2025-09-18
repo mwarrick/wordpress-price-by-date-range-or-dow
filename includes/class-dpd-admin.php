@@ -53,7 +53,7 @@ class DPD_Admin {
 			$time_end = sanitize_text_field($_POST['dpd_time_end'] ?? '20:00');
 			
 			// Debug: Log what we're trying to save
-			error_log('DPD Admin: Saving time settings - Start: ' . $time_start . ', End: ' . $time_end);
+			dpd_debug_log('DPD Admin: Saving time settings - Start: ' . $time_start . ', End: ' . $time_end);
 			
 			update_option('dpd_time_start', $time_start);
 			update_option('dpd_time_end', $time_end);
@@ -61,7 +61,7 @@ class DPD_Admin {
 			// Debug: Verify what was actually saved
 			$saved_start = get_option('dpd_time_start');
 			$saved_end = get_option('dpd_time_end');
-			error_log('DPD Admin: Verified saved settings - Start: ' . $saved_start . ', End: ' . $saved_end);
+			dpd_debug_log('DPD Admin: Verified saved settings - Start: ' . $saved_start . ', End: ' . $saved_end);
 			
 			$notice = __('Time settings saved.', 'dpd');
 		}
@@ -78,7 +78,7 @@ class DPD_Admin {
 		$time_end = get_option('dpd_time_end', '20:00');
 		
 		// Debug: Show current values
-		error_log('DPD Admin: Current time settings - Start: ' . $time_start . ', End: ' . $time_end);
+		dpd_debug_log('DPD Admin: Current time settings - Start: ' . $time_start . ', End: ' . $time_end);
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e('Dynamic Pricing by Date — Global Rules', 'dpd'); ?></h1>
@@ -198,6 +198,17 @@ class DPD_Admin {
 	public static function render_diagnostics_page(): void {
 		if (!current_user_can('manage_woocommerce')) { return; }
 		
+		$notice = '';
+		
+		// Handle debug toggle form
+		if (isset($_POST['dpd_save_debug_settings']) && check_admin_referer('dpd_save_debug_settings_action', 'dpd_debug_nonce')) {
+			$debug_enabled = isset($_POST['dpd_debug_enabled']) ? '1' : '0';
+			update_option('dpd_debug_enabled', $debug_enabled);
+			$notice = __('Debug settings saved.', 'dpd');
+		}
+		
+		$debug_enabled = get_option('dpd_debug_enabled', false);
+		
 		// Test data
 		$test_date = '2025-09-21'; // Sunday
 		$test_time = '07:00';
@@ -212,8 +223,8 @@ class DPD_Admin {
 		$applicable_global_rules = DPD_Rules::filter_rules_for_apply($global_rules);
 		
 		// Debug rule data
-		error_log('DPD Diagnostics - All global rules: ' . print_r($global_rules, true));
-		error_log('DPD Diagnostics - Applicable rules: ' . print_r($applicable_global_rules, true));
+		dpd_debug_log('DPD Diagnostics - All global rules: ' . print_r($global_rules, true));
+		dpd_debug_log('DPD Diagnostics - Applicable rules: ' . print_r($applicable_global_rules, true));
 		
 		// Test specific date context - parse as site timezone
 		$dt = date_create_immutable_from_format('Y-m-d\TH:i', $test_datetime, wp_timezone());
@@ -239,15 +250,43 @@ class DPD_Admin {
 		$rule = DPD_Pricing::get_rule_for_context($test_product_id, $test_context);
 		
 		// Debug the rule data
-		error_log('DPD Diagnostics - Rule data: ' . print_r($rule, true));
-		error_log('DPD Diagnostics - Original price: ' . $original_price);
-		error_log('DPD Diagnostics - Test context: ' . print_r($test_context, true));
+		dpd_debug_log('DPD Diagnostics - Rule data: ' . print_r($rule, true));
+		dpd_debug_log('DPD Diagnostics - Original price: ' . $original_price);
+		dpd_debug_log('DPD Diagnostics - Test context: ' . print_r($test_context, true));
 		
 		$adjusted_price = $rule ? DPD_Rules::apply_rule_to_price(floatval($original_price), $rule) : floatval($original_price);
 		
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e('DPD Diagnostics', 'dpd'); ?></h1>
+			<?php if ($notice): ?>
+				<div class="notice notice-success is-dismissible"><p><?php echo esc_html($notice); ?></p></div>
+			<?php endif; ?>
+			
+			<h2><?php esc_html_e('Debug Settings', 'dpd'); ?></h2>
+			<p><?php esc_html_e('Control whether debug information is written to the debug.log file. When enabled, detailed logging will help troubleshoot issues but may create large log files.', 'dpd'); ?></p>
+			<form method="post">
+				<?php wp_nonce_field('dpd_save_debug_settings_action', 'dpd_debug_nonce'); ?>
+				<table class="form-table">
+					<tr>
+						<th scope="row"><?php esc_html_e('Debug Logging', 'dpd'); ?></th>
+						<td>
+							<label>
+								<input type="checkbox" name="dpd_debug_enabled" value="1" <?php checked($debug_enabled, '1'); ?> />
+								<?php esc_html_e('Enable debug logging to debug.log', 'dpd'); ?>
+							</label>
+							<p class="description">
+								<?php if ($debug_enabled): ?>
+									<strong style="color: #d63638;"><?php esc_html_e('Debug logging is currently ENABLED', 'dpd'); ?></strong>
+								<?php else: ?>
+									<strong style="color: #00a32a;"><?php esc_html_e('Debug logging is currently DISABLED', 'dpd'); ?></strong>
+								<?php endif; ?>
+							</p>
+						</td>
+					</tr>
+				</table>
+				<?php submit_button(__('Save Debug Settings', 'dpd'), 'primary', 'dpd_save_debug_settings'); ?>
+			</form>
 			
 			<h2>System Information</h2>
 			<table class="widefat">
@@ -350,12 +389,12 @@ class DPD_Admin {
 		// Provide product id for AJAX operations
 		echo '<input type="hidden" id="dpd_admin_product_id" value="' . esc_attr($post->ID) . '" />';
 		$rules = DPD_Rules::get_product_rules($post->ID);
-		error_log('DPD Metabox: Product ID ' . $post->ID . ' - Rules for display: ' . print_r($rules, true));
+		dpd_debug_log('DPD Metabox: Product ID ' . $post->ID . ' - Rules for display: ' . print_r($rules, true));
 		if (empty($rules)) {
 			$rules = [[
 				'enabled' => '0', 'dow' => '', 'date_start' => '', 'date_end' => '', 'type' => 'percent', 'direction' => 'increase', 'amount' => '10',
 			]];
-			error_log('DPD Metabox: Using default empty rule');
+			dpd_debug_log('DPD Metabox: Using default empty rule');
 		}
 		?>
 		<div class="dpd-metabox">
@@ -374,7 +413,7 @@ class DPD_Admin {
 				</thead>
 				<tbody id="dpd-product-rules-body">
 				<?php foreach ($rules as $idx => $rule): ?>
-					<?php error_log('DPD Metabox: Rendering rule ' . $idx . ' - ' . print_r($rule, true)); ?>
+					<?php dpd_debug_log('DPD Metabox: Rendering rule ' . $idx . ' - ' . print_r($rule, true)); ?>
 					<tr class="dpd-rule-row">
 						<td><input type="checkbox" name="dpd_product_rules[<?php echo esc_attr($idx); ?>][enabled]" value="1" <?php checked($rule['enabled'] ?? '0','1'); ?> /> <!-- DEBUG: enabled=<?php echo $rule['enabled'] ?? '0'; ?> --></td>
 						<td>
@@ -444,35 +483,35 @@ class DPD_Admin {
 	}
 
 	public static function save_product_rules_from_product_object(WC_Product $product): void {
-		error_log('DPD Product Save: Handler called for product ID ' . $product->get_id());
+		dpd_debug_log('DPD Product Save: Handler called for product ID ' . $product->get_id());
 		
 		// Only proceed if our nonce is present and valid
 		if (!isset($_POST['dpd_product_nonce']) || !wp_verify_nonce($_POST['dpd_product_nonce'], 'dpd_save_product_rules')) { 
-			error_log('DPD Product Save: Nonce check failed or missing');
+			dpd_debug_log('DPD Product Save: Nonce check failed or missing');
 			return; 
 		}
 		
-		error_log('DPD Product Save: Nonce check passed');
+		dpd_debug_log('DPD Product Save: Nonce check passed');
 		
 		// If Delete All (Save) was clicked, delete and return
 		if (isset($_POST['dpd_delete_all_product_rules'])) {
-			error_log('DPD Product Save: Delete All action detected');
+			dpd_debug_log('DPD Product Save: Delete All action detected');
 			delete_post_meta($product->get_id(), DPD_Rules::META_PRODUCT_RULES);
 			return;
 		}
 		
 		$rules = isset($_POST['dpd_product_rules']) && is_array($_POST['dpd_product_rules']) ? $_POST['dpd_product_rules'] : [];
-		error_log('DPD Product Save: Raw rules posted: ' . print_r($rules, true));
+		dpd_debug_log('DPD Product Save: Raw rules posted: ' . print_r($rules, true));
 		
 		$clean = DPD_Rules::sanitize_rules_array($rules);
-		error_log('DPD Product Save: Cleaned rules: ' . print_r($clean, true));
+		dpd_debug_log('DPD Product Save: Cleaned rules: ' . print_r($clean, true));
 		
 		if (!empty($clean)) {
 			DPD_Rules::save_product_rules($product->get_id(), $clean);
-			error_log('DPD Product Save: Rules saved successfully');
+			dpd_debug_log('DPD Product Save: Rules saved successfully');
 		} else {
 			delete_post_meta($product->get_id(), DPD_Rules::META_PRODUCT_RULES);
-			error_log('DPD Product Save: No valid rules, deleted existing rules');
+			dpd_debug_log('DPD Product Save: No valid rules, deleted existing rules');
 		}
 	}
 

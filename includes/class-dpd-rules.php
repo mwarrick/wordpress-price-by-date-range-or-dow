@@ -18,9 +18,9 @@ class DPD_Rules {
 
 	public static function get_product_rules(int $product_id): array {
 		$rules = get_post_meta($product_id, self::META_PRODUCT_RULES, true);
-		error_log('DPD Rules Load: Product ID ' . $product_id . ' - Raw meta: ' . print_r($rules, true));
+		dpd_debug_log('DPD Rules Load: Product ID ' . $product_id . ' - Raw meta: ' . print_r($rules, true));
 		$result = is_array($rules) ? array_values($rules) : [];
-		error_log('DPD Rules Load: Product ID ' . $product_id . ' - Processed rules: ' . print_r($result, true));
+		dpd_debug_log('DPD Rules Load: Product ID ' . $product_id . ' - Processed rules: ' . print_r($result, true));
 		return $result;
 	}
 
@@ -111,33 +111,33 @@ class DPD_Rules {
 
 	public static function rule_matches(array $rule, int $dow, string $date): bool {
 		if (($rule['enabled'] ?? '0') !== '1') { 
-			error_log('DPD Rule Match: Rule disabled');
+			dpd_debug_log('DPD Rule Match: Rule disabled');
 			return false; 
 		}
 		if (isset($rule['dow']) && $rule['dow'] !== '') { 
 			$rule_dow = (int)$rule['dow'];
-			error_log('DPD Rule Match: Checking DoW - Rule DoW: ' . $rule_dow . ' (type: ' . gettype($rule_dow) . '), Context DoW: ' . $dow . ' (type: ' . gettype($dow) . ')');
+			dpd_debug_log('DPD Rule Match: Checking DoW - Rule DoW: ' . $rule_dow . ' (type: ' . gettype($rule_dow) . '), Context DoW: ' . $dow . ' (type: ' . gettype($dow) . ')');
 			if ($rule_dow !== $dow) { 
-				error_log('DPD Rule Match: DoW mismatch - returning false');
+				dpd_debug_log('DPD Rule Match: DoW mismatch - returning false');
 				return false; 
 			}
-			error_log('DPD Rule Match: DoW match - continuing');
+			dpd_debug_log('DPD Rule Match: DoW match - continuing');
 		}
 		if (!empty($rule['date_start'])) { 
-			error_log('DPD Rule Match: Checking date_start - Date: ' . $date . ', Start: ' . $rule['date_start']);
+			dpd_debug_log('DPD Rule Match: Checking date_start - Date: ' . $date . ', Start: ' . $rule['date_start']);
 			if ($date < $rule['date_start']) { 
-				error_log('DPD Rule Match: Date before start - returning false');
+				dpd_debug_log('DPD Rule Match: Date before start - returning false');
 				return false; 
 			}
 		}
 		if (!empty($rule['date_end'])) { 
-			error_log('DPD Rule Match: Checking date_end - Date: ' . $date . ', End: ' . $rule['date_end']);
+			dpd_debug_log('DPD Rule Match: Checking date_end - Date: ' . $date . ', End: ' . $rule['date_end']);
 			if ($date > $rule['date_end']) { 
-				error_log('DPD Rule Match: Date after end - returning false');
+				dpd_debug_log('DPD Rule Match: Date after end - returning false');
 				return false; 
 			}
 		}
-		error_log('DPD Rule Match: All checks passed - returning true');
+		dpd_debug_log('DPD Rule Match: All checks passed - returning true');
 		return true;
 	}
 
@@ -171,7 +171,7 @@ class DPD_Rules {
 		$decimals = wc_get_price_decimals();
 		
 		// Debug logging
-		error_log("DPD Price Calculation: Original=$price, Amount=$amount, Type=$type, Direction=$direction, Adjusted=$adjusted");
+		dpd_debug_log("DPD Price Calculation: Original=$price, Amount=$amount, Type=$type, Direction=$direction, Adjusted=$adjusted");
 		
 		return round($adjusted, $decimals);
 	}
