@@ -7,8 +7,9 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 	exit;
 }
 
-// Remove global option
+// Remove global options
 delete_option('dpd_global_rules');
+delete_option('dpd_blackout_dates');
 
 // Remove per-product meta across all products
 global $wpdb;

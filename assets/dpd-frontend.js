@@ -16,6 +16,47 @@
 		}
 	}
 	function debounce(fn, wait){ var to; return function(){ var ctx=this, args=arguments; clearTimeout(to); to=setTimeout(function(){ fn.apply(ctx,args); }, wait); }; }
+	
+	// Check if a date is blacked out
+	function checkBlackoutDate(date) {
+		if (!date) return;
+		
+		$.post(DPD_FRONTEND.ajax_url, {
+			action: 'dpd_check_blackout',
+			nonce: DPD_FRONTEND.nonce,
+			date: date
+		}, function(resp) {
+			console.log('DPD Blackout Check - Response:', resp);
+			if (resp && resp.success && resp.data) {
+				updateAddToCartButton(resp.data.is_blacked_out, resp.data.message);
+			}
+		}).fail(function(xhr, status, error) {
+			console.error('DPD Blackout Check - AJAX failed:', status, error, xhr.responseText);
+		});
+	}
+	
+	// Update the add to cart button based on blackout status
+	function updateAddToCartButton(isBlackedOut, message) {
+		var $addToCartBtn = $('.single_add_to_cart_button');
+		var $form = $('form.cart');
+		
+		if (isBlackedOut) {
+			// Hide the add to cart button and show unavailable message
+			$addToCartBtn.hide();
+			var $unavailableMsg = $('.dpd-unavailable-message');
+			if ($unavailableMsg.length === 0) {
+				$unavailableMsg = $('<div class="dpd-unavailable-message" style="padding: 10px; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 4px; margin: 10px 0; text-align: center; font-weight: bold;">' + message + '</div>');
+				$form.append($unavailableMsg);
+			} else {
+				$unavailableMsg.text(message).show();
+			}
+		} else {
+			// Show the add to cart button and hide unavailable message
+			$addToCartBtn.show();
+			$('.dpd-unavailable-message').hide();
+		}
+	}
+	
 	var requestUpdate = debounce(function(){
 		var val = $('#dpd_selected_datetime').val();
 		var productId = $('#dpd_product_id').val();
@@ -77,6 +118,15 @@
 	$(document).on('change input', '#dpd_date, #dpd_time', function(){
 		updateHidden();
 		requestUpdate();
+		
+		// Check for blackout dates when date changes
+		var date = $('#dpd_date').val();
+		if (date) {
+			checkBlackoutDate(date);
+		} else {
+			// If no date selected, show the add to cart button
+			updateAddToCartButton(false, '');
+		}
 	});
 	
 	// Handle variation selection for variable products
@@ -99,6 +149,13 @@
 		if (!date || !time) {
 			e.preventDefault();
 			alert('Please select both a date and time for pricing.');
+			return false;
+		}
+		
+		// Check if the selected date is blacked out
+		if ($('.dpd-unavailable-message').is(':visible')) {
+			e.preventDefault();
+			alert('The selected date is not available for booking.');
 			return false;
 		}
 		

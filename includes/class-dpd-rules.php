@@ -6,6 +6,7 @@ if (!defined('ABSPATH')) {
 class DPD_Rules {
 	const OPTION_GLOBAL_RULES = 'dpd_global_rules';
 	const META_PRODUCT_RULES  = '_dpd_product_rules';
+	const OPTION_BLACKOUT_DATES = 'dpd_blackout_dates';
 
 	public static function get_global_rules(): array {
 		$rules = get_option(self::OPTION_GLOBAL_RULES, []);
@@ -174,5 +175,165 @@ class DPD_Rules {
 		dpd_debug_log("DPD Price Calculation: Original=$price, Amount=$amount, Type=$type, Direction=$direction, Adjusted=$adjusted");
 		
 		return round($adjusted, $decimals);
+	}
+
+	// Blackout Date Management Methods
+	public static function get_blackout_dates(): array {
+		$blackouts = get_option(self::OPTION_BLACKOUT_DATES, []);
+		dpd_debug_log('DPD Rules: Retrieved blackout dates: ' . print_r($blackouts, true));
+		return is_array($blackouts) ? array_values($blackouts) : [];
+	}
+
+	public static function save_blackout_dates(array $blackouts): void {
+		dpd_debug_log('DPD Rules: Saving blackout dates: ' . print_r($blackouts, true));
+		update_option(self::OPTION_BLACKOUT_DATES, array_values($blackouts), false);
+		dpd_debug_log('DPD Rules: Blackout dates saved successfully');
+	}
+
+	public static function sanitize_blackout_rule(array $blackout): array {
+		$enabled = isset($blackout['enabled']) && (string)$blackout['enabled'] === '1' ? '1' : '0';
+		$type = isset($blackout['type']) && in_array($blackout['type'], ['date_range', 'day_of_week'], true) ? $blackout['type'] : 'date_range';
+		
+		$sanitized = [
+			'enabled' => $enabled,
+			'type' => $type,
+		];
+
+		if ($type === 'date_range') {
+			$date_start = isset($blackout['date_start']) ? sanitize_text_field($blackout['date_start']) : '';
+			$date_end = isset($blackout['date_end']) ? sanitize_text_field($blackout['date_end']) : '';
+			
+			// Validate date ranges - prevent past dates
+			$today = current_time('Y-m-d');
+			if (!empty($date_start) && $date_start < $today) {
+				$date_start = $today;
+			}
+			if (!empty($date_end) && $date_end < $today) {
+				$date_end = '';
+			}
+			
+			// Validate date range logic
+			if (!empty($date_start) && !empty($date_end) && $date_start > $date_end) {
+				$date_end = $date_start;
+			}
+			
+			$sanitized['date_start'] = $date_start;
+			$sanitized['date_end'] = $date_end;
+			$sanitized['dow'] = ''; // Clear DOW for date range type
+		} else {
+			// Day of week blackout
+			$dow = isset($blackout['dow']) ? trim((string)$blackout['dow']) : '';
+			$sanitized['dow'] = ($dow === '' || $dow === 'any') ? '' : preg_replace('/[^0-6]/', '', $dow);
+			$sanitized['date_start'] = ''; // Clear date fields for DOW type
+			$sanitized['date_end'] = '';
+		}
+
+		return $sanitized;
+	}
+
+	public static function sanitize_blackout_array(array $blackouts): array {
+		$clean = [];
+		dpd_debug_log('DPD Blackout: Processing ' . count($blackouts) . ' blackout rules');
+		
+		foreach ($blackouts as $idx => $blackout) {
+			dpd_debug_log('DPD Blackout: Processing rule ' . $idx . ': ' . print_r($blackout, true));
+			
+			if (!is_array($blackout)) { 
+				dpd_debug_log('DPD Blackout: Rule ' . $idx . ' is not an array, skipping');
+				continue; 
+			}
+			
+			$b = self::sanitize_blackout_rule($blackout);
+			dpd_debug_log('DPD Blackout: Sanitized rule ' . $idx . ': ' . print_r($b, true));
+			
+			// Drop fully-empty rows
+			$allBlank = ($b['enabled'] !== '1');
+			if ($b['type'] === 'date_range') {
+				$allBlank = $allBlank && ($b['date_start'] === '') && ($b['date_end'] === '');
+			} else {
+				$allBlank = $allBlank && ($b['dow'] === '');
+			}
+			
+			dpd_debug_log('DPD Blackout: Rule ' . $idx . ' is blank: ' . ($allBlank ? 'Yes' : 'No'));
+			
+			if ($allBlank) { 
+				dpd_debug_log('DPD Blackout: Skipping blank rule ' . $idx);
+				continue; 
+			}
+			
+			$clean[] = $b;
+			dpd_debug_log('DPD Blackout: Added rule ' . $idx . ' to clean array');
+		}
+		
+		dpd_debug_log('DPD Blackout: Final clean rules count: ' . count($clean));
+		return $clean;
+	}
+
+	public static function is_date_blacked_out(string $date, ?int $dow = null): bool {
+		$blackouts = self::get_blackout_dates();
+		$applicable_blackouts = [];
+		
+		dpd_debug_log('DPD Blackout Check: Checking date ' . $date . ' for blackouts');
+		dpd_debug_log('DPD Blackout Check: Total blackout rules: ' . count($blackouts));
+		
+		// Filter for enabled blackouts only
+		foreach ($blackouts as $blackout) {
+			if (!is_array($blackout)) { continue; }
+			$sb = self::sanitize_blackout_rule($blackout);
+			dpd_debug_log('DPD Blackout Check: Sanitized blackout rule: ' . print_r($sb, true));
+			if ($sb['enabled'] !== '1') { 
+				dpd_debug_log('DPD Blackout Check: Rule disabled, skipping');
+				continue; 
+			}
+			$applicable_blackouts[] = $sb;
+		}
+		
+		dpd_debug_log('DPD Blackout Check: Applicable blackout rules: ' . count($applicable_blackouts));
+		
+		// If no DOW provided, calculate it
+		if ($dow === null) {
+			$ts = strtotime($date . ' 12:00:00'); // Use noon to avoid timezone issues
+			$dow = (int)wp_date('w', $ts);
+			dpd_debug_log('DPD Blackout Check: Date string: ' . $date . ', Timestamp: ' . $ts . ', wp_date result: ' . $dow);
+		}
+		
+		$day_names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+		dpd_debug_log('DPD Blackout Check: Date ' . $date . ' is day of week: ' . $dow . ' (' . $day_names[$dow] . ')');
+		dpd_debug_log('DPD Blackout Check: Raw timestamp: ' . $ts . ', wp_date result: ' . wp_date('w', $ts));
+		
+		foreach ($applicable_blackouts as $blackout) {
+			dpd_debug_log('DPD Blackout Check: Checking rule type: ' . $blackout['type']);
+			
+			if ($blackout['type'] === 'date_range') {
+				// Check if date falls within the range
+				dpd_debug_log('DPD Blackout Check: Date range rule - start: ' . $blackout['date_start'] . ', end: ' . $blackout['date_end']);
+				if (!empty($blackout['date_start']) && $date < $blackout['date_start']) {
+					dpd_debug_log('DPD Blackout Check: Date before start range, continuing');
+					continue;
+				}
+				if (!empty($blackout['date_end']) && $date > $blackout['date_end']) {
+					dpd_debug_log('DPD Blackout Check: Date after end range, continuing');
+					continue;
+				}
+				// Date is within range, so it's blacked out
+				dpd_debug_log('DPD Blackout Check: Date is within range - BLACKED OUT');
+				return true;
+			} else {
+				// Day of week blackout
+				$rule_dow_name = !empty($blackout['dow']) ? $day_names[(int)$blackout['dow']] : 'Any';
+				$test_dow_name = $day_names[$dow];
+				dpd_debug_log('DPD Blackout Check: Day of week rule - Rule DOW: ' . $blackout['dow'] . ' (' . $rule_dow_name . '), checking against: ' . $dow . ' (' . $test_dow_name . ')');
+				dpd_debug_log('DPD Blackout Check: Comparison: (int)' . $blackout['dow'] . ' === ' . $dow . ' = ' . ((int)$blackout['dow'] === $dow ? 'TRUE' : 'FALSE'));
+				if (!empty($blackout['dow']) && (int)$blackout['dow'] === $dow) {
+					dpd_debug_log('DPD Blackout Check: Day of week matches - BLACKED OUT');
+					return true;
+				} else {
+					dpd_debug_log('DPD Blackout Check: Day of week does not match, continuing');
+				}
+			}
+		}
+		
+		dpd_debug_log('DPD Blackout Check: Date is NOT blacked out');
+		return false;
 	}
 }

@@ -162,4 +162,99 @@
 		var today = new Date().toISOString().split('T')[0];
 		$('input[type="date"]').attr('min', today);
 	});
+
+	// Blackout dates functionality
+	function buildBlackoutRow(idx){
+		return '' +
+		'<tr class="dpd-blackout-row">' +
+		'  <td><input type="checkbox" name="dpd_blackouts['+idx+'][enabled]" value="1" /></td>' +
+		'  <td><select name="dpd_blackouts['+idx+'][type]" class="dpd-blackout-type">' +
+		'    <option value="date_range">Date Range</option>' +
+		'    <option value="day_of_week">Day of Week</option>' +
+		'  </select></td>' +
+		'  <td class="dpd-dow-field"><select name="dpd_blackouts['+idx+'][dow]">' +
+		'    <option value="">Any</option>' +
+		'    <option value="0">Sunday</option>' +
+		'    <option value="1">Monday</option>' +
+		'    <option value="2">Tuesday</option>' +
+		'    <option value="3">Wednesday</option>' +
+		'    <option value="4">Thursday</option>' +
+		'    <option value="5">Friday</option>' +
+		'    <option value="6">Saturday</option>' +
+		'  </select></td>' +
+		'  <td class="dpd-date-start-field"><input type="date" name="dpd_blackouts['+idx+'][date_start]" /></td>' +
+		'  <td class="dpd-date-end-field"><input type="date" name="dpd_blackouts['+idx+'][date_end]" /></td>' +
+		'  <td><button type="button" class="button dpd-remove-blackout-row">Remove</button></td>' +
+		'</tr>';
+	}
+
+	$(document).on('click', '#dpd-add-blackout-row', function(){
+		var $tbody = $('#dpd-blackouts-body');
+		var idx = $tbody.find('tr.dpd-blackout-row').length;
+		$tbody.append(buildBlackoutRow(idx));
+		// Set minimum date for new date inputs
+		var today = new Date().toISOString().split('T')[0];
+		$tbody.find('input[type="date"]').attr('min', today);
+	});
+
+	$(document).on('click', '.dpd-remove-blackout-row', function(){
+		var $btn = $(this);
+		var $row = $btn.closest('tr');
+		$row.remove();
+	});
+
+	// Toggle field visibility based on blackout type
+	$(document).on('change', '.dpd-blackout-type', function(){
+		var $select = $(this);
+		var $row = $select.closest('tr');
+		var type = $select.val();
+		
+		if (type === 'day_of_week') {
+			$row.find('.dpd-date-start-field, .dpd-date-end-field').hide();
+			$row.find('.dpd-dow-field').show();
+		} else {
+			$row.find('.dpd-date-start-field, .dpd-date-end-field').show();
+			$row.find('.dpd-dow-field').hide();
+		}
+	});
+
+	// Initialize field visibility on page load
+	$(document).ready(function(){
+		$('.dpd-blackout-type').each(function(){
+			$(this).trigger('change');
+		});
+	});
+
+	// Prune blank blackout rows on submit
+	$(document).on('submit', 'form', function(){
+		var $form = $(this);
+		// Only act on blackout forms
+		var isBlackoutForm = $form.find('#dpd-blackouts-body').length > 0;
+		if (!isBlackoutForm) { return; }
+		
+		var $rows = $form.find('tbody#dpd-blackouts-body tr.dpd-blackout-row');
+		
+		// Remove rows where all key inputs are empty/unchecked
+		$rows.each(function(index){
+			var $r = $(this);
+			var enabled = $r.find('input[type="checkbox"]').is(':checked');
+			var type = $r.find('select[name*="[type]"]').val() || '';
+			var hasDow = ($r.find('select[name*="[dow]"]').val() || '') !== '';
+			var ds = ($r.find('input[name*="[date_start]"]').val() || '').trim();
+			var de = ($r.find('input[name*="[date_end]"]').val() || '').trim();
+			
+			// Only remove if the rule is not enabled AND has no data
+			var hasData = false;
+			if (type === 'day_of_week') {
+				hasData = hasDow;
+			} else {
+				hasData = ds || de;
+			}
+			
+			// Keep the row if it's enabled OR has data
+			if (!enabled && !hasData) {
+				$r.remove();
+			}
+		});
+	});
 })(jQuery);

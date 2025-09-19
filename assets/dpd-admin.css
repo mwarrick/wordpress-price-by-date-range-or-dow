@@ -2,3 +2,32 @@
 .dpd-rules-table.small td, .dpd-rules-table.small th { padding: 4px; }
 .dpd-rules-table th, .dpd-rules-table td { border-bottom: 1px solid #eee; }
 .dpd-metabox .dpd-rules-table { width: 100%; }
+
+/* Blackout dates table styling */
+.dpd-blackouts-table { width: 100%; border-collapse: collapse; }
+.dpd-blackouts-table th, .dpd-blackouts-table td { border-bottom: 1px solid #eee; padding: 8px; }
+.dpd-blackouts-table th { background: #f9f9f9; font-weight: bold; }
+
+/* Field visibility control for blackout types */
+.dpd-dow-field, .dpd-date-start-field, .dpd-date-end-field {
+    transition: opacity 0.3s ease;
+}
+
+.dpd-dow-field.hidden, .dpd-date-start-field.hidden, .dpd-date-end-field.hidden {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* Blackout row styling */
+.dpd-blackout-row td {
+    vertical-align: middle;
+}
+
+.dpd-blackout-row input[type="checkbox"] {
+    margin: 0;
+}
+
+.dpd-blackout-row select, .dpd-blackout-row input[type="date"] {
+    width: 100%;
+    max-width: 150px;
+}

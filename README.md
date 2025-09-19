@@ -1,6 +1,6 @@
-# Dynamic Pricing by Date for Woocommerce v1.7.0
+# Dynamic Pricing by Date for Woocommerce v1.8.1
 
-A comprehensive WordPress plugin that dynamically adjusts WooCommerce product prices based on date and time selection. Perfect for tour businesses, event bookings, and time-sensitive pricing.
+A comprehensive WordPress plugin that dynamically adjusts WooCommerce product prices based on date and time selection. Perfect for tour businesses, event bookings, and time-sensitive pricing. Now includes blackout date functionality to disable purchases on specific dates.
 
 ## Features
 
@@ -20,7 +20,8 @@ A comprehensive WordPress plugin that dynamically adjusts WooCommerce product pr
 - **Transparent Pricing**: Clear explanations in cart showing why prices differ from product page
 
 ### 🛠️ Admin Features
-- **Separate Settings Forms**: Time range settings and pricing rules have independent forms
+- **Separate Settings Forms**: Time range settings, pricing rules, and blackout dates have independent forms
+- **Blackout Date Management**: Configure dates when products cannot be purchased
 - **Diagnostics Page**: Built-in debugging tools for troubleshooting
 - **Date Validation**: Prevents selection of past dates
 - **Nonce Security**: All forms protected with WordPress nonces
@@ -32,6 +33,7 @@ A comprehensive WordPress plugin that dynamically adjusts WooCommerce product pr
 - **Complete Cart Integration**: Selected date/time stored in cart and order data with consistent pricing
 - **Variable Product Support**: Full support for WooCommerce variable products and variations
 - **Transparent Pricing Display**: Clear explanations of price adjustments in cart and orders
+- **Blackout Date Validation**: Real-time checking of blackout dates with user-friendly error messages
 - **WooCommerce Compatible**: Works with all WooCommerce product types
 - **Translation Ready**: Full internationalization support
 
@@ -51,7 +53,14 @@ Navigate to **WooCommerce → Dynamic Pricing by Date**:
    - Set end time (e.g., 20:00 for 8 PM)
    - Click "Save Time Settings"
 
-2. **Global Pricing Rules**:
+2. **Blackout Dates**:
+   - Enable/disable blackout rules
+   - Choose between date range or day of week blackouts
+   - For date ranges: Set start and end dates
+   - For day of week: Select specific days (e.g., block all Sundays)
+   - Click "Save Blackout Dates"
+
+3. **Global Pricing Rules**:
    - Enable/disable rules
    - Select day of week (optional)
    - Set date range (optional)
@@ -89,6 +98,42 @@ Navigate to **WooCommerce → Dynamic Pricing by Date**:
 - **Direction**: Decrease
 - **Amount**: 20
 - **Result**: 80% of original price (20% discount)
+
+## Blackout Date Examples
+
+### Holiday Blackout
+- **Type**: Date Range
+- **Start Date**: 2024-12-24
+- **End Date**: 2024-12-26
+- **Result**: No bookings allowed on Christmas Eve, Christmas Day, and Boxing Day
+
+### Weekly Maintenance
+- **Type**: Day of Week
+- **Day of Week**: Monday (1)
+- **Result**: No bookings allowed on any Monday
+
+### Seasonal Closure
+- **Type**: Date Range
+- **Start Date**: 2024-01-15
+- **End Date**: 2024-02-15
+- **Result**: No bookings allowed during winter maintenance period
+
+## Blackout Date User Experience
+
+When users select a blackout date:
+
+### Frontend Behavior
+- **Date Selection**: Users can still select blackout dates from the date picker
+- **Real-Time Feedback**: As soon as a blackout date is selected, the add to cart button disappears
+- **Clear Message**: A red message appears saying "This date is not available"
+- **Form Prevention**: Users cannot submit the form with a blackout date selected
+
+### Example User Flow
+1. User visits product page
+2. User selects a date (e.g., Christmas Day)
+3. Add to cart button immediately disappears
+4. Red message appears: "This date is not available"
+5. User must select a different date to proceed
 
 ## Cart Transparency
 
@@ -138,6 +183,8 @@ For troubleshooting, use the built-in diagnostics page at **WooCommerce → DPD 
 
 ## Version History
 
+- **1.8.1**: Fixed fatal error when multiple DPD plugins are active; added function existence check for dpd_debug_log() to prevent conflicts
+- **1.8.0**: Added blackout date functionality - Configure dates when products cannot be purchased; real-time frontend validation with user-friendly error messages; admin interface for managing blackout rules by date range or day of week; enhanced diagnostics page with blackout testing
 - **1.7.0**: Added admin toggle to enable/disable debug logging; replaced raw error_log calls with conditional logging; general refinements and stability improvements
 - **1.6.0**: Stable release with transparent pricing - Added cart pricing explanations, fixed CSS styling issues, removed interfering icons, enhanced user experience with clear pricing breakdowns
 - **1.5.0**: Complete cart integration - Fixed cart pricing for variable products, added comprehensive cart item pricing hooks, resolved frontend-to-cart price consistency, enhanced debugging system

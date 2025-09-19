@@ -73,7 +73,16 @@ class DPD_Admin {
 			DPD_Rules::save_global_rules($clean);
 			$notice = __('Pricing rules saved.', 'dpd');
 		}
+		
+		// Handle blackout dates form
+		if (isset($_POST['dpd_save_blackouts']) && check_admin_referer('dpd_save_blackouts_action', 'dpd_blackouts_nonce')) {
+			$blackouts = isset($_POST['dpd_blackouts']) && is_array($_POST['dpd_blackouts']) ? $_POST['dpd_blackouts'] : [];
+			$clean = DPD_Rules::sanitize_blackout_array($blackouts);
+			DPD_Rules::save_blackout_dates($clean);
+			$notice = __('Blackout dates saved.', 'dpd');
+		}
 		$rules = DPD_Rules::get_global_rules();
+		$blackouts = DPD_Rules::get_blackout_dates();
 		$time_start = get_option('dpd_time_start', '06:00');
 		$time_end = get_option('dpd_time_end', '20:00');
 		
@@ -127,6 +136,63 @@ class DPD_Admin {
 					</tr>
 				</table>
 				<?php submit_button(__('Save Time Settings', 'dpd'), 'primary', 'dpd_save_time_settings'); ?>
+			</form>
+			
+			<h2><?php esc_html_e('Blackout Dates', 'dpd'); ?></h2>
+			<p><?php esc_html_e('Configure dates when products cannot be purchased. Customers will see "This date is not available" instead of the add to cart button.', 'dpd'); ?></p>
+			<form method="post">
+				<?php wp_nonce_field('dpd_save_blackouts_action', 'dpd_blackouts_nonce'); ?>
+				<table class="widefat dpd-blackouts-table">
+					<thead>
+						<tr>
+							<th><?php esc_html_e('Enabled', 'dpd'); ?></th>
+							<th><?php esc_html_e('Type', 'dpd'); ?></th>
+							<th><?php esc_html_e('Day of Week', 'dpd'); ?></th>
+							<th><?php esc_html_e('Start Date', 'dpd'); ?></th>
+							<th><?php esc_html_e('End Date', 'dpd'); ?></th>
+							<th><?php esc_html_e('Actions', 'dpd'); ?></th>
+						</tr>
+					</thead>
+					<tbody id="dpd-blackouts-body">
+						<?php
+						if (empty($blackouts)) {
+							$blackouts = [[
+								'enabled' => '0',
+								'type' => 'date_range',
+								'dow' => '',
+								'date_start' => '',
+								'date_end' => '',
+							]];
+						}
+						foreach ($blackouts as $idx => $blackout):
+						?>
+						<tr class="dpd-blackout-row">
+							<td><input type="checkbox" name="dpd_blackouts[<?php echo esc_attr($idx); ?>][enabled]" value="1" <?php checked($blackout['enabled'] ?? '0', '1'); ?> /></td>
+							<td>
+								<select name="dpd_blackouts[<?php echo esc_attr($idx); ?>][type]" class="dpd-blackout-type">
+									<option value="date_range" <?php selected($blackout['type'] ?? '', 'date_range'); ?>><?php esc_html_e('Date Range', 'dpd'); ?></option>
+									<option value="day_of_week" <?php selected($blackout['type'] ?? '', 'day_of_week'); ?>><?php esc_html_e('Day of Week', 'dpd'); ?></option>
+								</select>
+							</td>
+							<td class="dpd-dow-field">
+								<select name="dpd_blackouts[<?php echo esc_attr($idx); ?>][dow]">
+									<option value="" <?php selected(($blackout['dow'] ?? ''), ''); ?>><?php esc_html_e('Any', 'dpd'); ?></option>
+									<?php $dows = ['0'=>__('Sunday','dpd'),'1'=>__('Monday','dpd'),'2'=>__('Tuesday','dpd'),'3'=>__('Wednesday','dpd'),'4'=>__('Thursday','dpd'),'5'=>__('Friday','dpd'),'6'=>__('Saturday','dpd')]; foreach ($dows as $val=>$label) { echo '<option value="'.esc_attr($val).'"'. selected(($blackout['dow'] ?? ''), $val, false) .'>'. esc_html($label) .'</option>'; } ?>
+								</select>
+							</td>
+							<td class="dpd-date-start-field">
+								<input type="date" name="dpd_blackouts[<?php echo esc_attr($idx); ?>][date_start]" value="<?php echo esc_attr($blackout['date_start'] ?? ''); ?>" />
+							</td>
+							<td class="dpd-date-end-field">
+								<input type="date" name="dpd_blackouts[<?php echo esc_attr($idx); ?>][date_end]" value="<?php echo esc_attr($blackout['date_end'] ?? ''); ?>" />
+							</td>
+							<td><button type="button" class="button dpd-remove-blackout-row"><?php esc_html_e('Remove', 'dpd'); ?></button></td>
+						</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+				<p><button type="button" class="button button-secondary" id="dpd-add-blackout-row"><?php esc_html_e('Add Blackout Rule', 'dpd'); ?></button></p>
+				<p><button type="submit" class="button button-primary" name="dpd_save_blackouts" value="1"><?php esc_html_e('Save Blackout Dates', 'dpd'); ?></button></p>
 			</form>
 			
 			<h2><?php esc_html_e('Global Pricing Rules', 'dpd'); ?></h2>
@@ -214,6 +280,10 @@ class DPD_Admin {
 		$test_time = '07:00';
 		$test_datetime = $test_date . 'T' . $test_time;
 		$test_product_id = 2118; // Use a real product ID
+		
+		// Test blackout dates
+		$blackout_dates = DPD_Rules::get_blackout_dates();
+		$is_test_date_blacked_out = DPD_Rules::is_date_blacked_out($test_date);
 		
 		// Get current context
 		$current_context = DPD_Rules::today_context();
@@ -336,6 +406,56 @@ class DPD_Admin {
 				</tbody>
 			</table>
 			
+			<h2>Blackout Dates Test</h2>
+			<table class="widefat">
+				<tr><td><strong>Test Date:</strong></td><td><?php echo $test_date; ?></td></tr>
+				<tr><td><strong>Is Blacked Out:</strong></td><td><?php echo $is_test_date_blacked_out ? 'YES' : 'No'; ?></td></tr>
+				<tr><td><strong>Total Blackout Rules:</strong></td><td><?php echo count($blackout_dates); ?></td></tr>
+			</table>
+			
+			<h3>Blackout Rules</h3>
+			<table class="widefat">
+				<thead>
+					<tr>
+						<th>Enabled</th>
+						<th>Type</th>
+						<th>Day of Week</th>
+						<th>Start Date</th>
+						<th>End Date</th>
+						<th>Matches Test Date?</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ($blackout_dates as $blackout): ?>
+					<tr>
+						<td><?php echo $blackout['enabled'] ? 'Yes' : 'No'; ?></td>
+						<td><?php echo $blackout['type']; ?></td>
+						<td><?php echo $blackout['dow'] ?? 'Any'; ?></td>
+						<td><?php echo $blackout['date_start'] ?? 'Any'; ?></td>
+						<td><?php echo $blackout['date_end'] ?? 'Any'; ?></td>
+						<td>
+							<?php 
+							$matches = false;
+							if ($blackout['enabled']) {
+								if ($blackout['type'] === 'date_range') {
+									$date_start = $blackout['date_start'] ?? '';
+									$date_end = $blackout['date_end'] ?? '';
+									$matches = (empty($date_start) || $test_date >= $date_start) && 
+											  (empty($date_end) || $test_date <= $date_end);
+								} else {
+									$test_dow = (int)wp_date('w', strtotime($test_date));
+									$dow = $blackout['dow'] ?? '';
+									$matches = !empty($dow) && (int)$dow === $test_dow;
+								}
+							}
+							echo $matches ? 'YES' : 'No'; 
+							?>
+						</td>
+					</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+			
 			<h2>Pricing Test</h2>
 			<table class="widefat">
 				<tr><td><strong>Test Product:</strong></td><td><?php echo $test_product ? $test_product->get_name() : 'Not found'; ?></td></tr>
@@ -347,21 +467,83 @@ class DPD_Admin {
 				<tr><td><strong>Adjusted Price:</strong></td><td><?php echo $adjusted_price; ?></td></tr>
 			</table>
 			
+			<h2>Blackout Date Testing</h2>
+			<p>Test specific dates for blackout status:</p>
+			<input type="date" id="test-blackout-date" value="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" />
+			<button type="button" id="test-specific-blackout" class="button">Test This Date</button>
+			<div id="blackout-test-result" style="margin-top: 10px; padding: 10px; background: #f0f0f0; display: none;"></div>
+			
+			<h3>Day of Week Reference</h3>
+			<p>PHP Day of Week values:</p>
+			<ul>
+				<li>0 = Sunday</li>
+				<li>1 = Monday</li>
+				<li>2 = Tuesday</li>
+				<li>3 = Wednesday</li>
+				<li>4 = Thursday</li>
+				<li>5 = Friday</li>
+				<li>6 = Saturday</li>
+			</ul>
+			<p><strong>Test Date 2025-09-23:</strong> <?php 
+				$test_ts = strtotime('2025-09-23');
+				$test_dow = (int)wp_date('w', $test_ts);
+				$day_names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+				echo $day_names[$test_dow] . ' (DOW: ' . $test_dow . ')';
+			?></p>
+			
 			<h2>AJAX Test</h2>
-			<p>Test the AJAX endpoint directly:</p>
-			<button type="button" id="test-ajax" class="button">Test AJAX Request</button>
+			<p>Test the AJAX endpoints directly:</p>
+			<button type="button" id="test-ajax" class="button">Test Price AJAX</button>
+			<button type="button" id="test-blackout-ajax" class="button">Test Blackout AJAX</button>
 			<div id="ajax-result" style="margin-top: 10px; padding: 10px; background: #f0f0f0; display: none;"></div>
 		</div>
 		
 		<script>
 		jQuery(document).ready(function($) {
+			$('#test-specific-blackout').click(function() {
+				var testDate = $('#test-blackout-date').val();
+				$('#blackout-test-result').show().html('Testing date: ' + testDate + '...');
+				
+				// Calculate day of week
+				var dateObj = new Date(testDate);
+				var dow = dateObj.getDay(); // 0 = Sunday, 1 = Monday, etc.
+				var dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+				
+				$.post(ajaxurl, {
+					action: 'dpd_check_blackout',
+					nonce: '<?php echo wp_create_nonce('dpd_ajax_nonce'); ?>',
+					date: testDate
+				}, function(resp) {
+					var result = '<strong>Test Date:</strong> ' + testDate + ' (' + dayNames[dow] + ', DOW: ' + dow + ')<br>';
+					result += '<strong>Is Blacked Out:</strong> ' + (resp.data.is_blacked_out ? 'YES' : 'No') + '<br>';
+					result += '<strong>Message:</strong> ' + resp.data.message + '<br>';
+					result += '<pre>' + JSON.stringify(resp, null, 2) + '</pre>';
+					$('#blackout-test-result').html(result);
+				}).fail(function(xhr) {
+					$('#blackout-test-result').html('<strong>Error:</strong> ' + xhr.responseText);
+				});
+			});
+			
 			$('#test-ajax').click(function() {
-				$('#ajax-result').show().html('Testing...');
+				$('#ajax-result').show().html('Testing price AJAX...');
 				$.post(ajaxurl, {
 					action: 'dpd_get_price',
 					nonce: '<?php echo wp_create_nonce('dpd_ajax_nonce'); ?>',
 					product_id: <?php echo $test_product_id; ?>,
 					datetime: '<?php echo $test_datetime; ?>'
+				}, function(resp) {
+					$('#ajax-result').html('<pre>' + JSON.stringify(resp, null, 2) + '</pre>');
+				}).fail(function(xhr) {
+					$('#ajax-result').html('<strong>Error:</strong> ' + xhr.responseText);
+				});
+			});
+			
+			$('#test-blackout-ajax').click(function() {
+				$('#ajax-result').show().html('Testing blackout AJAX...');
+				$.post(ajaxurl, {
+					action: 'dpd_check_blackout',
+					nonce: '<?php echo wp_create_nonce('dpd_ajax_nonce'); ?>',
+					date: '<?php echo $test_date; ?>'
 				}, function(resp) {
 					$('#ajax-result').html('<pre>' + JSON.stringify(resp, null, 2) + '</pre>');
 				}).fail(function(xhr) {

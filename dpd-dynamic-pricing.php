@@ -1,8 +1,8 @@
 <?php
 /*
 Plugin Name: Dynamic Pricing by Date for Woocommerce
-Description: Adjust WooCommerce product prices by day-of-week and date range, with global and per-product rules.
-Version: 1.7.0
+Description: Adjust WooCommerce product prices by day-of-week and date range, with global and per-product rules. Includes blackout date functionality to disable purchases on specific dates.
+Version: 1.8.7
 Author: Mark Warrick
 Text Domain: dpd
 */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
 	return;
 }
 
-define('DPD_VERSION', '1.7.0');
+define('DPD_VERSION', '1.8.7');
 define('DPD_PLUGIN_FILE', __FILE__);
 define('DPD_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('DPD_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -20,9 +20,11 @@ define('DPD_PLUGIN_URL', plugin_dir_url(__FILE__));
  * Conditional debug logging for DPD plugin
  * Only logs if debug mode is enabled in admin settings
  */
-function dpd_debug_log($message) {
-	if (get_option('dpd_debug_enabled', false)) {
-		error_log($message);
+if (!function_exists('dpd_debug_log')) {
+	function dpd_debug_log($message) {
+		if (get_option('dpd_debug_enabled', false)) {
+			error_log($message);
+		}
 	}
 }
 

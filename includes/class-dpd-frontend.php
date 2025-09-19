@@ -17,6 +17,8 @@ class DPD_Frontend {
 		add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_assets']);
 		add_action('wp_ajax_dpd_get_price', [__CLASS__, 'ajax_get_price']);
 		add_action('wp_ajax_nopriv_dpd_get_price', [__CLASS__, 'ajax_get_price']);
+		add_action('wp_ajax_dpd_check_blackout', [__CLASS__, 'ajax_check_blackout']);
+		add_action('wp_ajax_nopriv_dpd_check_blackout', [__CLASS__, 'ajax_check_blackout']);
 		add_action('woocommerce_before_cart_table', [__CLASS__, 'display_cart_pricing_notice']);
 	}
 
@@ -84,6 +86,14 @@ class DPD_Frontend {
 			wc_add_notice(__('Invalid date/time format.', 'dpd'), 'error');
 			return false;
 		}
+		
+		// Check if the selected date is blacked out
+		$date = substr($val, 0, 10); // Extract date part (YYYY-MM-DD)
+		if (DPD_Rules::is_date_blacked_out($date)) {
+			wc_add_notice(__('This date is not available for booking.', 'dpd'), 'error');
+			return false;
+		}
+		
 		return $passed;
 	}
 
@@ -325,6 +335,36 @@ class DPD_Frontend {
 				'context_dow' => $ctx['dow'],
 				'context_date' => $ctx['date'],
 			],
+		]);
+	}
+
+	public static function ajax_check_blackout(): void {
+		dpd_debug_log('DPD Blackout Check: Request received');
+		dpd_debug_log('DPD Blackout Check: POST data: ' . print_r($_POST, true));
+		
+		check_ajax_referer(self::NONCE_KEY, 'nonce');
+		$date = isset($_POST['date']) ? sanitize_text_field(wp_unslash($_POST['date'])) : '';
+		
+		dpd_debug_log('DPD Blackout Check: Date: ' . $date);
+		
+		if (empty($date)) { 
+			dpd_debug_log('DPD Blackout Check: Bad request - missing date');
+			wp_send_json_error(['message' => 'bad_request'], 400); 
+		}
+		
+		// Validate date format
+		if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+			dpd_debug_log('DPD Blackout Check: Invalid date format: ' . $date);
+			wp_send_json_error(['message' => 'invalid_date'], 400);
+		}
+		
+		$is_blacked_out = DPD_Rules::is_date_blacked_out($date);
+		dpd_debug_log('DPD Blackout Check: Date ' . $date . ' is blacked out: ' . ($is_blacked_out ? 'YES' : 'NO'));
+		
+		wp_send_json_success([
+			'is_blacked_out' => $is_blacked_out,
+			'date' => $date,
+			'message' => $is_blacked_out ? __('This date is not available', 'dpd') : __('Date is available', 'dpd'),
 		]);
 	}
 }
