@@ -142,56 +142,76 @@ class DPD_Admin {
 			<p><?php esc_html_e('Configure dates when products cannot be purchased. Customers will see "This date is not available" instead of the add to cart button.', 'dpd'); ?></p>
 			<form method="post">
 				<?php wp_nonce_field('dpd_save_blackouts_action', 'dpd_blackouts_nonce'); ?>
+				<?php
+					// Prepare separate lists for date range and day-of-week blackouts
+					$date_range_blackouts = [];
+					$dow_blackouts = [];
+					$source_blackouts = is_array($blackouts) ? $blackouts : [];
+					foreach ($source_blackouts as $b) {
+						$type = $b['type'] ?? 'date_range';
+						if ($type === 'day_of_week') { $dow_blackouts[] = $b; }
+						else { $date_range_blackouts[] = $b; }
+					}
+					if (empty($date_range_blackouts)) { $date_range_blackouts = [[ 'enabled' => '0', 'type' => 'date_range', 'date_start' => '', 'date_end' => '' ]]; }
+					if (empty($dow_blackouts)) { $dow_blackouts = [[ 'enabled' => '0', 'type' => 'day_of_week', 'dow' => '' ]]; }
+					$global_idx = 0; // unique running index across both tables
+				?>
+
+				<h3><?php esc_html_e('Blackout by Date Range', 'dpd'); ?></h3>
 				<table class="widefat dpd-blackouts-table">
 					<thead>
 						<tr>
 							<th><?php esc_html_e('Enabled', 'dpd'); ?></th>
-							<th><?php esc_html_e('Type', 'dpd'); ?></th>
-							<th><?php esc_html_e('Day of Week', 'dpd'); ?></th>
 							<th><?php esc_html_e('Start Date', 'dpd'); ?></th>
 							<th><?php esc_html_e('End Date', 'dpd'); ?></th>
 							<th><?php esc_html_e('Actions', 'dpd'); ?></th>
 						</tr>
 					</thead>
-					<tbody id="dpd-blackouts-body">
-						<?php
-						if (empty($blackouts)) {
-							$blackouts = [[
-								'enabled' => '0',
-								'type' => 'date_range',
-								'dow' => '',
-								'date_start' => '',
-								'date_end' => '',
-							]];
-						}
-						foreach ($blackouts as $idx => $blackout):
-						?>
-						<tr class="dpd-blackout-row">
-							<td><input type="checkbox" name="dpd_blackouts[<?php echo esc_attr($idx); ?>][enabled]" value="1" <?php checked($blackout['enabled'] ?? '0', '1'); ?> /></td>
+					<tbody id="dpd-blackouts-body-date-range">
+						<?php foreach ($date_range_blackouts as $blackout): ?>
+						<tr class="dpd-blackout-row dpd-blackout-date-range-row">
 							<td>
-								<select name="dpd_blackouts[<?php echo esc_attr($idx); ?>][type]" class="dpd-blackout-type">
-									<option value="date_range" <?php selected($blackout['type'] ?? '', 'date_range'); ?>><?php esc_html_e('Date Range', 'dpd'); ?></option>
-									<option value="day_of_week" <?php selected($blackout['type'] ?? '', 'day_of_week'); ?>><?php esc_html_e('Day of Week', 'dpd'); ?></option>
-								</select>
+								<input type="checkbox" name="dpd_blackouts[<?php echo esc_attr($global_idx); ?>][enabled]" value="1" <?php checked($blackout['enabled'] ?? '0', '1'); ?> />
+								<input type="hidden" name="dpd_blackouts[<?php echo esc_attr($global_idx); ?>][type]" value="date_range" />
+							</td>
+							<td class="dpd-date-start-field"><input type="date" name="dpd_blackouts[<?php echo esc_attr($global_idx); ?>][date_start]" value="<?php echo esc_attr($blackout['date_start'] ?? ''); ?>" /></td>
+							<td class="dpd-date-end-field"><input type="date" name="dpd_blackouts[<?php echo esc_attr($global_idx); ?>][date_end]" value="<?php echo esc_attr($blackout['date_end'] ?? ''); ?>" /></td>
+							<td><button type="button" class="button dpd-remove-blackout-row"><?php esc_html_e('Remove', 'dpd'); ?></button></td>
+						</tr>
+						<?php $global_idx++; endforeach; ?>
+					</tbody>
+				</table>
+				<p><button type="button" class="button button-secondary" id="dpd-add-blackout-date-range-row"><?php esc_html_e('Add Date Range', 'dpd'); ?></button></p>
+
+				<h3><?php esc_html_e('Blackout by Day of Week', 'dpd'); ?></h3>
+				<table class="widefat dpd-blackouts-table">
+					<thead>
+						<tr>
+							<th><?php esc_html_e('Enabled', 'dpd'); ?></th>
+							<th><?php esc_html_e('Day of Week', 'dpd'); ?></th>
+							<th><?php esc_html_e('Actions', 'dpd'); ?></th>
+						</tr>
+					</thead>
+					<tbody id="dpd-blackouts-body-dow">
+						<?php foreach ($dow_blackouts as $blackout): ?>
+						<tr class="dpd-blackout-row dpd-blackout-dow-row">
+							<td>
+								<input type="checkbox" name="dpd_blackouts[<?php echo esc_attr($global_idx); ?>][enabled]" value="1" <?php checked($blackout['enabled'] ?? '0', '1'); ?> />
+								<input type="hidden" name="dpd_blackouts[<?php echo esc_attr($global_idx); ?>][type]" value="day_of_week" />
 							</td>
 							<td class="dpd-dow-field">
-								<select name="dpd_blackouts[<?php echo esc_attr($idx); ?>][dow]">
+								<select name="dpd_blackouts[<?php echo esc_attr($global_idx); ?>][dow]">
 									<option value="" <?php selected(($blackout['dow'] ?? ''), ''); ?>><?php esc_html_e('Any', 'dpd'); ?></option>
 									<?php $dows = ['0'=>__('Sunday','dpd'),'1'=>__('Monday','dpd'),'2'=>__('Tuesday','dpd'),'3'=>__('Wednesday','dpd'),'4'=>__('Thursday','dpd'),'5'=>__('Friday','dpd'),'6'=>__('Saturday','dpd')]; foreach ($dows as $val=>$label) { echo '<option value="'.esc_attr($val).'"'. selected(($blackout['dow'] ?? ''), $val, false) .'>'. esc_html($label) .'</option>'; } ?>
 								</select>
 							</td>
-							<td class="dpd-date-start-field">
-								<input type="date" name="dpd_blackouts[<?php echo esc_attr($idx); ?>][date_start]" value="<?php echo esc_attr($blackout['date_start'] ?? ''); ?>" />
-							</td>
-							<td class="dpd-date-end-field">
-								<input type="date" name="dpd_blackouts[<?php echo esc_attr($idx); ?>][date_end]" value="<?php echo esc_attr($blackout['date_end'] ?? ''); ?>" />
-							</td>
 							<td><button type="button" class="button dpd-remove-blackout-row"><?php esc_html_e('Remove', 'dpd'); ?></button></td>
 						</tr>
-						<?php endforeach; ?>
+						<?php $global_idx++; endforeach; ?>
 					</tbody>
 				</table>
-				<p><button type="button" class="button button-secondary" id="dpd-add-blackout-row"><?php esc_html_e('Add Blackout Rule', 'dpd'); ?></button></p>
+				<p><button type="button" class="button button-secondary" id="dpd-add-blackout-dow-row"><?php esc_html_e('Add Day of Week', 'dpd'); ?></button></p>
+
 				<p><button type="submit" class="button button-primary" name="dpd_save_blackouts" value="1"><?php esc_html_e('Save Blackout Dates', 'dpd'); ?></button></p>
 			</form>
 			

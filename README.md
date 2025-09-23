@@ -1,4 +1,4 @@
-# Dynamic Pricing by Date for Woocommerce v1.8.1
+# Dynamic Pricing by Date for Woocommerce v1.8.8
 
 A comprehensive WordPress plugin that dynamically adjusts WooCommerce product prices based on date and time selection. Perfect for tour businesses, event bookings, and time-sensitive pricing. Now includes blackout date functionality to disable purchases on specific dates.
 
@@ -54,10 +54,10 @@ Navigate to **WooCommerce → Dynamic Pricing by Date**:
    - Click "Save Time Settings"
 
 2. **Blackout Dates**:
-   - Enable/disable blackout rules
-   - Choose between date range or day of week blackouts
-   - For date ranges: Set start and end dates
-   - For day of week: Select specific days (e.g., block all Sundays)
+   - Manage blackout rules in two sections for clarity:
+     - Blackout by Date Range: Start/End date columns
+     - Blackout by Day of Week: Day selector column
+   - Enable/disable rows as needed
    - Click "Save Blackout Dates"
 
 3. **Global Pricing Rules**:
@@ -183,6 +183,7 @@ For troubleshooting, use the built-in diagnostics page at **WooCommerce → DPD 
 
 ## Version History
 
+- **1.8.8**: Split blackout admin UI into two clear sections (Date Range and Day of Week) so columns and inputs line up intuitively; improved JS row builders; minor CSS polish; bumped version
 - **1.8.1**: Fixed fatal error when multiple DPD plugins are active; added function existence check for dpd_debug_log() to prevent conflicts
 - **1.8.0**: Added blackout date functionality - Configure dates when products cannot be purchased; real-time frontend validation with user-friendly error messages; admin interface for managing blackout rules by date range or day of week; enhanced diagnostics page with blackout testing
 - **1.7.0**: Added admin toggle to enable/disable debug logging; replaced raw error_log calls with conditional logging; general refinements and stability improvements

@@ -8,6 +8,11 @@
 .dpd-blackouts-table th, .dpd-blackouts-table td { border-bottom: 1px solid #eee; padding: 8px; }
 .dpd-blackouts-table th { background: #f9f9f9; font-weight: bold; }
 
+/* Header visibility control for blackout types */
+.dpd-header-dow, .dpd-header-date-start, .dpd-header-date-end {
+    transition: opacity 0.3s ease;
+}
+
 /* Field visibility control for blackout types */
 .dpd-dow-field, .dpd-date-start-field, .dpd-date-end-field {
     transition: opacity 0.3s ease;
