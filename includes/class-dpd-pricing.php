@@ -21,6 +21,8 @@ class DPD_Pricing {
 		add_filter('woocommerce_cart_item_price', [__CLASS__, 'filter_cart_item_price'], 9999, 3);
 		add_filter('woocommerce_cart_item_subtotal', [__CLASS__, 'filter_cart_item_subtotal'], 9999, 3);
 		add_action('woocommerce_add_to_cart', [__CLASS__, 'apply_cart_item_pricing'], 10, 6);
+		// Ensure cart totals reflect adjusted prices
+		add_action('woocommerce_before_calculate_totals', [__CLASS__, 'adjust_cart_item_prices'], 20, 1);
 	}
 
 	public static function filter_price($price, $product) {
@@ -255,6 +257,45 @@ class DPD_Pricing {
 		// We can use this to trigger cart recalculation if needed
 		if (!empty($cart_item_data[DPD_Frontend::FIELD_KEY])) {
 			dpd_debug_log('DPD Add to Cart: Datetime data found, item should be priced correctly');
+		}
+	}
+
+	public static function adjust_cart_item_prices($cart) {
+		// Avoid running multiple times
+		static $ran = false;
+		if ($ran) { return; }
+		$ran = true;
+		
+		if (!is_object($cart) || !method_exists($cart, 'get_cart')) { return; }
+		
+		dpd_debug_log('DPD Totals: Adjusting cart item prices before totals calculation');
+		
+		foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
+			if (empty($cart_item[DPD_Frontend::FIELD_KEY])) { continue; }
+			
+			$product = isset($cart_item['data']) ? $cart_item['data'] : null;
+			if (!$product || !method_exists($product, 'get_price')) { continue; }
+			
+			$original_price = floatval($product->get_price());
+			$val = $cart_item[DPD_Frontend::FIELD_KEY];
+			
+			$dt = date_create_immutable_from_format('Y-m-d\TH:i', $val, wp_timezone());
+			if (!$dt instanceof DateTimeImmutable) { continue; }
+			
+			$ctx = [
+				'dow' => (int)wp_date('w', $dt->getTimestamp()),
+				'date' => wp_date('Y-m-d', $dt->getTimestamp())
+			];
+			
+			$main_product_id = $cart_item['product_id'];
+			$rule = self::get_rule_for_context($main_product_id, $ctx);
+			if ($rule) {
+				$adjusted_price = DPD_Rules::apply_rule_to_price($original_price, $rule);
+				if ($adjusted_price !== $original_price && method_exists($product, 'set_price')) {
+					$product->set_price($adjusted_price);
+					dpd_debug_log('DPD Totals: Set adjusted price for item ' . $cart_item_key . ' from ' . $original_price . ' to ' . $adjusted_price);
+				}
+			}
 		}
 	}
 }
